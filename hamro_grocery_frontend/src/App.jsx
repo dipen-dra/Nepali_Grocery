@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthContext } from './auth/AuthContext.jsx';
-import ProtectedRoute from './routers/ProtectedRoutes.jsx'; 
+import ProtectedRoute from './routers/ProtectedRoutes.jsx';
 import MainLayout from './layouts/MainLayout.jsx';
 import HomePage from './pages/HomePage.jsx';
 import AdminDashboard from './pages/AdminDashboard.jsx';
@@ -24,9 +24,9 @@ export default function App() {
       <Route path="/" element={<MainLayout><HomePage /></MainLayout>} />
 
       {/* --- AUTH ROUTES --- */}
-      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/dashboard" replace />} />
-      <Route path="/register" element={!user ? <SignupPage /> : <Navigate to="/dashboard" replace />} />
-      <Route path="/forgot-password" element={!user ? <ForgotPasswordPage /> : <Navigate to="/dashboard" replace />} />
+      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} replace />} />
+      <Route path="/register" element={!user ? <SignupPage /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} replace />} />
+      <Route path="/forgot-password" element={!user ? <ForgotPasswordPage /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} replace />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
       {/* --- PROTECTED ROUTES --- */}
@@ -60,12 +60,22 @@ export default function App() {
         }
       /> */}
 
-      {/* --- DASHBOARD ROUTING --- */}
+      {/* --- ADMIN DASHBOARD --- */}
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute adminOnly={true}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* --- USER DASHBOARD --- */}
       <Route
         path="/dashboard/*"
         element={
           <ProtectedRoute>
-            {user?.role === 'admin' ? <AdminDashboard /> : <UserDashboard />}
+            <UserDashboard />
           </ProtectedRoute>
         }
       />

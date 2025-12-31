@@ -15,7 +15,6 @@ const useLoginUser = () => {
             if (response.success) {
                 toast.success("Login successful!");
                 authContext.login(response);
-                navigate('/dashboard', { replace: true });
             } else {
                 toast.error(response.message || "An unknown login error occurred.");
             }

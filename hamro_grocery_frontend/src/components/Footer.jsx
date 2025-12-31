@@ -55,7 +55,7 @@ const Footer = () => {
                             </li>
                             <li className="flex items-center">
                                 <FaEnvelope className="text-green-600 mr-3" />
-                                <a href="mailto:hamrogrocery10@gmail.com" className="text-gray-500 hover:text-green-600 transition-colors">hamrogrocery10@gmail.com</a>
+                                <a href="mailto:nepgrocery10@gmail.com" className="text-gray-500 hover:text-green-600 transition-colors">nepgrocery10@gmail.com</a>
                             </li>
                         </ul>
                     </div>
@@ -80,7 +80,7 @@ const Footer = () => {
 
                 <div className="mt-16 pt-8 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center text-center">
                     <p className="text-gray-400 text-xs mb-4 sm:mb-0">
-                        &copy; {new Date().getFullYear()} Nepali Grocery. All Rights Reserved.
+                        &copy; {new Date().getFullYear()} NepGrocery. All Rights Reserved.
                     </p>
                     <div className="flex space-x-4">
                         <a href="#" aria-label="Facebook" className="text-gray-400 hover:text-blue-600 transition-colors"><FaFacebookF size={20} /></a>

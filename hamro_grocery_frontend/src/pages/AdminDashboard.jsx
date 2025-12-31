@@ -210,14 +210,14 @@ const DashboardPage = () => {
         topProducts: stats?.topProducts || [],
         recentOrders: stats?.recentOrders || [],
     };
-    
+
     const LightTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             return (
-            <div className="p-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg shadow-md">
-                <p className="label font-semibold text-gray-700">{`${label}`}</p>
-                <p className="intro text-blue-600">{`Sales : ₹${payload[0].value.toLocaleString()}`}</p>
-            </div>
+                <div className="p-2 bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg shadow-md">
+                    <p className="label font-semibold text-gray-700">{`${label}`}</p>
+                    <p className="intro text-blue-600">{`Sales : ₹${payload[0].value.toLocaleString()}`}</p>
+                </div>
             );
         }
         return null;
@@ -281,7 +281,7 @@ const OrdersPage = () => {
     const handleStatusChange = (orderId, status) => {
         mutation.mutate({ orderId, status });
     };
-    
+
     const handleViewDetails = (orderId) => {
         setSelectedOrderId(orderId);
         setDetailsModalOpen(true);
@@ -584,7 +584,7 @@ const AdminDashboard = () => {
         logout();
         window.location.href = '/';
     };
-    
+
     const confirmLogoutFromChatbot = () => {
         closeChatbot();
         setTimeout(() => setLogoutConfirmOpen(true), 100);
@@ -637,7 +637,7 @@ const AdminDashboard = () => {
         <>
             <div className="p-4 flex items-center justify-between">
                 <a href="#dashboard" className="flex items-center gap-3">
-                    <img src="/hamro2.png" alt="GrocerAdmin Logo" className="h-12 w-auto" />
+                    <img src="/NepGrocery.png" alt="GrocerAdmin Logo" className="h-12 w-auto" />
                 </a>
                 <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-gray-500"><X size={24} /></button>
             </div>
@@ -678,7 +678,7 @@ const AdminDashboard = () => {
                 </header>
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6 md:p-8">{renderPage()}</main>
             </div>
-            
+
             {/* --- FLOATING CHATBOT --- */}
             <div className="fixed bottom-6 right-6 z-30">
                 <button
@@ -689,9 +689,9 @@ const AdminDashboard = () => {
                     {isChatbotVisible ? <X size={24} /> : <MessageSquare size={24} />}
                 </button>
             </div>
-            
-            <Chatbot 
-                isVisible={isChatbotVisible} 
+
+            <Chatbot
+                isVisible={isChatbotVisible}
                 onClose={closeChatbot}
                 onConfirmLogout={confirmLogoutFromChatbot}
             />

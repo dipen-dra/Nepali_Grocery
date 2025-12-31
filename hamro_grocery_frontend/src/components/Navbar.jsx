@@ -59,7 +59,7 @@ const Navbar = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                <Link to="/dashboard" className="text-gray-800 font-semibold hover:text-green-500">
+                <Link to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} className="text-gray-800 font-semibold hover:text-green-500">
                   Welcome, {user.fullName}
                 </Link>
                 <button

@@ -28,11 +28,11 @@ const AuthContextProvider = ({ children }) => {
         if (data && data.data && data.token) {
             const userData = data.data;
             const token = data.token;
-            
+
             localStorage.setItem("user", JSON.stringify(userData));
             localStorage.setItem("token", token);
             setUser(userData);
-            
+
             if (userData.role === 'admin') {
                 navigate('/admin/dashboard', { replace: true });
             } else {
@@ -69,7 +69,7 @@ const AuthContextProvider = ({ children }) => {
 
     return (
         <AuthContext.Provider value={contextValue}>
-            
+
             {children}
         </AuthContext.Provider>
     );

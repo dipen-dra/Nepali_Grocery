@@ -20,27 +20,27 @@ import { Chatbot } from '../components/Chatbot.jsx';
 const CategoryNavbar = ({ selectedCategory, onCategoryChange }) => {
     const { data: categories, isLoading } = useQuery({ queryKey: ['categories'], queryFn: fetchCategories });
     const CategoryButton = ({ id, name }) => (
-    <button
-        onClick={() => onCategoryChange(id)}
-        className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors whitespace-nowrap mx-1.5 flex-shrink-0 ${selectedCategory === id ? 'bg-green-600 text-white shadow' : 'bg-white text-gray-700 hover:bg-gray-200'}`}
-    >
-        {name}
-    </button>
+        <button
+            onClick={() => onCategoryChange(id)}
+            className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors whitespace-nowrap mx-1.5 flex-shrink-0 ${selectedCategory === id ? 'bg-green-600 text-white shadow' : 'bg-white text-gray-700 hover:bg-gray-200'}`}
+        >
+            {name}
+        </button>
     );
 
     return (
-    <nav className="bg-white shadow-sm sticky top-0 z-10 border-b-2 border-green-200">
-        <div className="flex items-center justify-center px-2 sm:px-4 md:px-6 py-3 overflow-x-auto">
-        {isLoading ? (
-            <p className="text-sm text-gray-500 px-4">Loading categories...</p>
-        ) : (
-            <>
-            <CategoryButton id="all" name="All" />
-            {categories?.map((cat) => <CategoryButton key={cat._id} id={cat._id} name={cat.name} />)}
-            </>
-        )}
-        </div>
-    </nav>
+        <nav className="bg-white shadow-sm sticky top-0 z-10 border-b-2 border-green-200">
+            <div className="flex items-center justify-center px-2 sm:px-4 md:px-6 py-3 overflow-x-auto">
+                {isLoading ? (
+                    <p className="text-sm text-gray-500 px-4">Loading categories...</p>
+                ) : (
+                    <>
+                        <CategoryButton id="all" name="All" />
+                        {categories?.map((cat) => <CategoryButton key={cat._id} id={cat._id} name={cat.name} />)}
+                    </>
+                )}
+            </div>
+        </nav>
     );
 };
 
@@ -91,11 +91,10 @@ const UserDashboard = () => {
         <Link
             to={to}
             onClick={() => setIsSidebarOpen(false)}
-            className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-colors duration-200 ${
-                location.pathname.startsWith(to)
-                ? 'bg-green-600 text-white font-semibold'
-                : 'text-gray-600 hover:bg-green-50'
-            }`}
+            className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-colors duration-200 ${location.pathname.startsWith(to)
+                    ? 'bg-green-600 text-white font-semibold'
+                    : 'text-gray-600 hover:bg-green-50'
+                }`}
         >
             <Icon size={22} />
             <span>{children}</span>
@@ -106,7 +105,7 @@ const UserDashboard = () => {
         <div className="flex flex-col h-full bg-white">
             <div className="p-4 flex items-center justify-between border-b">
                 <Link to="/dashboard/shop" className="flex items-center gap-2">
-                    <img src="/hamro2.png" alt="Hamro Grocery" className="h-12 w-auto" />
+                    <img src="/NepGrocery.png" alt="Hamro Grocery" className="h-12 w-auto" />
                 </Link>
                 <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-gray-500">
                     <X size={24} />
@@ -182,7 +181,7 @@ const UserDashboard = () => {
                         <Route path="*" element={<Navigate to="shop" replace />} />
                     </Routes>
                 </main>
-                
+
                 {isShopPage && <ShoppingList />}
             </div>
 
@@ -195,9 +194,9 @@ const UserDashboard = () => {
                     {isChatbotVisible ? <X size={24} /> : <MessageSquare size={24} />}
                 </button>
             </div>
-            
-            <Chatbot 
-                isVisible={isChatbotVisible} 
+
+            <Chatbot
+                isVisible={isChatbotVisible}
                 onClose={closeChatbot}
                 onConfirmLogout={confirmLogoutFromChatbot}
                 cartItems={cartItems} // <-- PASS CART ITEMS AS A PROP

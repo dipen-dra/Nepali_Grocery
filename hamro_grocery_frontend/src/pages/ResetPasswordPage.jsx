@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom'; 
-import logo from '../assets/hamro2.png'; 
+import { useParams, useNavigate } from 'react-router-dom';
+import logo from '../assets/hamro2.png';
 
 const Link = ({ to, children, ...props }) => <a href={to} {...props}>{children}</a>;
 const EyeIcon = ({ className }) => (
@@ -17,8 +17,8 @@ const EyeSlashIcon = ({ className }) => (
 
 
 const ResetPasswordPage = () => {
-    
-    const { token } = useParams(); 
+
+    const { token } = useParams();
     const navigate = useNavigate();
 
     const [password, setPassword] = useState('');
@@ -45,12 +45,12 @@ const ResetPasswordPage = () => {
 
         setLoading(true);
         try {
-            
+
             const response = await axios.post(`/api/auth/reset-password/${token}`, { password });
             setSuccess(response.data.message);
-            
+
             setTimeout(() => {
-                navigate('/login'); 
+                navigate('/login');
             }, 3000);
 
         } catch (err) {
@@ -64,8 +64,10 @@ const ResetPasswordPage = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
             <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-8 space-y-6">
+                <div className="flex justify-center mb-6">
+                    <img src="/NepGrocery.png" alt="Hamro Grocery" className="h-16 w-auto" />
+                </div>
                 <div className="text-center">
-                    <img src={logo} alt="Hamro Grocery" className="mx-auto h-16 w-auto" />
                     <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Create New Password</h2>
                     <p className="mt-2 text-sm text-gray-600">Your new password must be different from previous ones.</p>
                 </div>
@@ -110,7 +112,7 @@ const ResetPasswordPage = () => {
                                 </button>
                             </div>
                         </div>
-                        
+
                         {error && <p className="text-sm text-red-600 text-center">{error}</p>}
 
                         <div>
