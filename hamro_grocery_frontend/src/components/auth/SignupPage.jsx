@@ -19,12 +19,13 @@ const SignupPage = () => {
     let strength = 0;
     if (password.length >= 8) strength += 1;
     if (/[A-Z]/.test(password)) strength += 1;
+    if (/[a-z]/.test(password)) strength += 1;
     if (/[0-9]/.test(password)) strength += 1;
     if (/[^A-Za-z0-9]/.test(password)) strength += 1;
 
     if (strength === 0) return '';
     if (strength < 3) return 'Weak';
-    if (strength === 3) return 'Medium';
+    if (strength < 5) return 'Medium';
     return 'Strong';
   };
 
@@ -49,8 +50,8 @@ const SignupPage = () => {
       toast.error('You must agree to the Terms and Conditions to sign up.');
       return;
     }
-    if (passwordStrength !== 'Strong' && passwordStrength !== 'Medium') {
-      toast.error("Please choose a stronger password.");
+    if (passwordStrength !== 'Strong') {
+      toast.error("Please choose a strong password (min 8 chars, uppercase, number, & symbol).");
       return;
     }
     registerUser(formData, {
@@ -186,7 +187,7 @@ const SignupPage = () => {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={isSubmitting || !agreedToTerms}
+                  disabled={isSubmitting || !agreedToTerms || passwordStrength !== 'Strong'}
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-lg shadow-lg hover:shadow-xl transition duration-300 transform hover:-translate-y-0.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Creating Account...' : 'Create Account'}
