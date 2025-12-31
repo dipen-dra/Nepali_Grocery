@@ -1,0 +1,14 @@
+@import url('https://fonts.googleapis.com/css2?family=Jaro:opsz@6..72&family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Philosopher:ital,wght@0,400;0,700;1,400;1,700&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
+@import "tailwindcss";
+
+*{
+  font-family: "Open Sans", sans-serif;
+}
+
+@theme {
+  --color-primary:#4fbf8b;
+  --color-primary-dull:#44ae7c;
+}
+
+
