@@ -1,7 +1,7 @@
 import React, { useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../auth/AuthContext";
-import logo from '../assets/hamro.png';
+
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
@@ -12,7 +12,7 @@ const Navbar = () => {
     navigate("/");
   };
 
-  
+
   const scrollToSection = (sectionId) => {
     const section = document.getElementById(sectionId);
     if (section) {
@@ -24,11 +24,11 @@ const Navbar = () => {
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center py-4">
-         
+
           <Link to="/" className="flex items-center">
-            <img src={logo} alt="Grocery Logo" className="h-20 w-auto" />
+            <img src="/NepGrocery.png" alt="Grocery Logo" className="h-20 w-auto" />
           </Link>
-          
+
 
           <div className="hidden md:flex items-center space-x-8">
             <button

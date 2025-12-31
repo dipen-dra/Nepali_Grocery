@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FaFacebookF, FaInstagram, FaTwitter, FaLinkedinIn, FaPhoneAlt, FaEnvelope } from 'react-icons/fa';
-import logo from '../assets/hamro2.png';
+
 
 
 const Footer = () => {
@@ -29,7 +29,7 @@ const Footer = () => {
 
                     {/* LOGO / MISSION */}
                     <div className="col-span-1 sm:col-span-2 md:col-span-1">
-                        <img src={logo} alt="Hamro Grocery Logo" className="h-10 w-auto mb-3" />
+                        <img src="/NepGrocery.png" alt="NepGrocery Logo" className="h-10 w-auto mb-3" />
                         <p className="text-gray-500 text-sm leading-relaxed">
                             Your daily dose of freshness, delivered right to your door with care and quality you can trust.
                         </p>
@@ -80,7 +80,7 @@ const Footer = () => {
 
                 <div className="mt-16 pt-8 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center text-center">
                     <p className="text-gray-400 text-xs mb-4 sm:mb-0">
-                        &copy; {new Date().getFullYear()} Hamro Grocery. All Rights Reserved.
+                        &copy; {new Date().getFullYear()} Nepali Grocery. All Rights Reserved.
                     </p>
                     <div className="flex space-x-4">
                         <a href="#" aria-label="Facebook" className="text-gray-400 hover:text-blue-600 transition-colors"><FaFacebookF size={20} /></a>
