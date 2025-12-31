@@ -2,26 +2,14 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Lottie from "lottie-react";
+import groceryAnimation from '../../assets/grocery-animation.json';
 import { useLoginUser } from '../../hooks/useLoginUser';
 import Navbar from '../Navbar';
-
-// Placeholder animation data - usually you would import a local JSON or fetch from URL
-// Since we don't have a local file, we'll use a public URL or a simple placeholder component
-// Ideally, download a JSON from LottieFiles and import it like: import groceryAnimation from '../../assets/animations/grocery.json';
 
 const LoginPage = () => {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
     const { login: loginUser, isLoading } = useLoginUser();
-
-    // Use a public Lottie URL for "Online Grocery Shopping" 
-    // If this link expires, replace with a local JSON file import
-    const animationUrl = "https://lottie.host/embed/9868e82a-28e6-42d7-9878-580749005938/s7z1K45c2.json";
-    // Since lottie-react works best with JSON data, let's try to fetch it or just use an iframe for external URL if needed, 
-    // BUT lottie-react <Lottie /> expects animationData (object) or path (string url).
-    // Let's use 'path' prop.
-    const lottiePath = "https://assets10.lottiefiles.com/packages/lf20_2mm5y2.json"; // Delivery guy
-
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -57,9 +45,8 @@ const LoginPage = () => {
 
                             {/* Lottie Animation */}
                             <div className="w-full max-w-sm mx-auto bg-white/10 backdrop-blur-sm rounded-xl p-4">
-                                {/* Using path for remote URL. If it fails, it might be CORS. best to use local JSON */}
                                 <Lottie
-                                    path="https://assets2.lottiefiles.com/packages/lf20_jcikwtux.json"
+                                    animationData={groceryAnimation}
                                     loop={true}
                                     className="h-64 w-full"
                                 />

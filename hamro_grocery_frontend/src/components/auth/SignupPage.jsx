@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Lottie from "lottie-react";
+import groceryAnimation from '../../assets/grocery-animation.json';
 import Navbar from '../Navbar';
 import { useRegisterUser } from '../../hooks/useRegisterUser';
 import TermsModal from '../TermsModal';
@@ -64,7 +65,7 @@ const SignupPage = () => {
               {/* Lottie Animation */}
               <div className="w-full max-w-sm mx-auto bg-white/10 backdrop-blur-sm rounded-xl p-4">
                 <Lottie
-                  path="https://assets2.lottiefiles.com/packages/lf20_jcikwtux.json"
+                  animationData={groceryAnimation}
                   loop={true}
                   className="h-64 w-full"
                 />
