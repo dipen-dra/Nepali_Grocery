@@ -253,6 +253,7 @@ import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
 
 // Helper function to create user data payload
+// Helper function to format user data
 const createUserData = (user) => ({
     _id: user._id,
     fullName: user.fullName,
@@ -328,7 +329,7 @@ export const sendResetLink = async (req, res) => {
         if (!email) {
             return res.status(400).json({ success: false, message: "Email is required" });
         }
-        
+
         const transporter = nodemailer.createTransport({
             service: "gmail",
             auth: {
@@ -344,10 +345,10 @@ export const sendResetLink = async (req, res) => {
                 message: "If an account with that email exists, a reset link has been sent.",
             });
         }
-        
+
         const token = jwt.sign({ id: user._id }, process.env.SECRET, { expiresIn: "15m" });
         const resetUrl = `${process.env.CLIENT_URL}/reset-password/${token}`;
-        
+
         const mailOptions = {
             from: `'Hamro Grocery' <${process.env.EMAIL_USER}>`,
             to: user.email,
@@ -375,7 +376,7 @@ export const sendResetLink = async (req, res) => {
         });
 
     } catch (err) {
-        console.error("Forgot Password Error:", err); 
+        console.error("Forgot Password Error:", err);
         res.status(500).json({
             success: false,
             message: "An error occurred while trying to send the reset email."
