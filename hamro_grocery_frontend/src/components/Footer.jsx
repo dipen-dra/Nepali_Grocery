@@ -7,7 +7,7 @@ import logo from '../assets/hamro2.png';
 const Footer = () => {
     const navigate = useNavigate();
 
-    
+
     const handleNavigate = (path) => {
         if (path.startsWith('/#')) {
             const sectionId = path.substring(2);
@@ -15,7 +15,7 @@ const Footer = () => {
             if (section) {
                 section.scrollIntoView({ behavior: 'smooth' });
             } else {
-                navigate('/'); 
+                navigate('/');
             }
         } else {
             navigate(path);
@@ -51,7 +51,7 @@ const Footer = () => {
                         <ul className="space-y-3 text-sm">
                             <li className="flex items-center">
                                 <FaPhoneAlt className="text-green-600 mr-3" />
-                                <a href="tel:9849423853" className="text-gray-500 hover:text-green-600 transition-colors">9842723033</a>
+                                <a href="tel:9849423853" className="text-gray-500 hover:text-green-600 transition-colors">9849423853</a>
                             </li>
                             <li className="flex items-center">
                                 <FaEnvelope className="text-green-600 mr-3" />
@@ -79,7 +79,7 @@ const Footer = () => {
                 </div>
 
                 <div className="mt-16 pt-8 border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center text-center">
-                     <p className="text-gray-400 text-xs mb-4 sm:mb-0">
+                    <p className="text-gray-400 text-xs mb-4 sm:mb-0">
                         &copy; {new Date().getFullYear()} Hamro Grocery. All Rights Reserved.
                     </p>
                     <div className="flex space-x-4">
