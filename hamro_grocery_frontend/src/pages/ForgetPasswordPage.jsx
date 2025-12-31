@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Lottie from "lottie-react";
-import groceryAnimation from '../assets/grocery-animation.json';
+import forgotPasswordAnimation from '../assets/forgot-password-animation.json';
 import Navbar from '../components/Navbar';
 
 const EmailIcon = ({ className }) => (
@@ -63,7 +63,7 @@ const ForgotPasswordPage = () => {
                             {/* Lottie Animation */}
                             <div className="w-full max-w-sm mx-auto bg-white/10 backdrop-blur-sm rounded-xl p-4">
                                 <Lottie
-                                    animationData={groceryAnimation}
+                                    animationData={forgotPasswordAnimation}
                                     loop={true}
                                     className="h-64 w-full"
                                 />
