@@ -23,10 +23,10 @@ const Navbar = () => {
   return (
     <nav className="bg-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center py-4">
+        <div className="flex justify-between items-center py-2">
 
           <Link to="/" className="flex items-center">
-            <img src="/NepGrocery.png" alt="Grocery Logo" className="h-20 w-auto" />
+            <img src="/NepGrocery.png" alt="Grocery Logo" className="h-14 w-auto" />
           </Link>
 
 
