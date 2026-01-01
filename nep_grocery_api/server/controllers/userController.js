@@ -319,14 +319,39 @@ export const loginUser = async (req, res) => {
             return res.status(401).json({ success: false, message: "Invalid email or password." });
         }
         const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET, { expiresIn: "1d" });
+
+        // Set cookie
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 24 * 60 * 60 * 1000 // 1 day
+        });
+
         res.status(200).json({
             success: true,
-            token,
+            message: "Login successful",
+            role: user.role, // Return role for frontend redirect logic
             data: createUserData(user),
         });
     } catch (error) {
         console.error("Login error:", error);
         res.status(500).json({ success: false, message: "Server error during login." });
+    }
+};
+
+// Logout
+export const logoutUser = async (req, res) => {
+    try {
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict'
+        });
+        res.status(200).json({ success: true, message: "Logged out successfully" });
+    } catch (error) {
+        console.error("Logout error:", error);
+        res.status(500).json({ success: false, message: "Server error during logout." });
     }
 };
 
@@ -358,9 +383,9 @@ export const sendResetLink = async (req, res) => {
         const resetUrl = `${process.env.CLIENT_URL}/reset-password/${token}`;
 
         const mailOptions = {
-            from: `'Hamro Grocery' <${process.env.EMAIL_USER}>`,
+            from: `'NepGrocery' <${process.env.EMAIL_USER}>`,
             to: user.email,
-            subject: "Reset Your Hamro Grocery Password",
+            subject: "Reset Your NepGrocery Password",
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
                     <h2 style="color: #2c5282;">Password Reset Request</h2>
@@ -371,7 +396,7 @@ export const sendResetLink = async (req, res) => {
                     </p>
                     <p>If you did not request this, please ignore this email. Your password will not be changed.</p>
                     <hr style="border: none; border-top: 1px solid #eee;" />
-                    <p style="font-size: 0.8em; color: #777;">Hamro Grocery Team</p>
+                    <p style="font-size: 0.8em; color: #777;">NepGrocery Team</p>
                 </div>
             `,
         };

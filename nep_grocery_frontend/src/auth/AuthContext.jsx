@@ -1,5 +1,6 @@
 import { createContext, useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../api/api";
 
 export const AuthContext = createContext();
 
@@ -8,29 +9,28 @@ const AuthContextProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
+    // Check for existing session using the profile endpoint
     useEffect(() => {
-        try {
-            const storedUser = localStorage.getItem("user");
-            const token = localStorage.getItem("token");
-
-            if (storedUser && token) {
-                setUser(JSON.parse(storedUser));
+        const checkAuth = async () => {
+            try {
+                const { data } = await api.get('/auth/profile');
+                if (data.success && data.data) {
+                    setUser(data.data);
+                }
+            } catch (error) {
+                // console.error("Session check failed", error);
+                setUser(null);
+            } finally {
+                setLoading(false);
             }
-        } catch (error) {
-            console.error("Failed to parse user from localStorage", error);
-            localStorage.clear();
-        } finally {
-            setLoading(false);
-        }
+        };
+        checkAuth();
     }, []);
 
     const login = (data) => {
-        if (data && data.data && data.token) {
+        if (data && data.data) {
             const userData = data.data;
-            const token = data.token;
-
-            localStorage.setItem("user", JSON.stringify(userData));
-            localStorage.setItem("token", token);
+            // No longer storing in localStorage
             setUser(userData);
 
             if (userData.role === 'admin') {
@@ -44,17 +44,22 @@ const AuthContextProvider = ({ children }) => {
         }
     };
 
-    const logout = () => {
-        localStorage.removeItem("user");
-        localStorage.removeItem("token");
-        setUser(null);
-        navigate("/", { replace: true });
+    const logout = async () => {
+        try {
+            await api.post('/auth/logout');
+            setUser(null);
+            navigate("/", { replace: true });
+        } catch (error) {
+            console.error("Logout failed", error);
+            // Force logout on error
+            setUser(null);
+            navigate("/", { replace: true });
+        }
     };
 
     const updateUser = (updatedUserData) => {
         if (updatedUserData) {
             setUser(updatedUserData);
-            localStorage.setItem("user", JSON.stringify(updatedUserData));
         }
     };
 

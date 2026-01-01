@@ -20,19 +20,12 @@ const API_URL = "http://localhost:8081/api";
 
 const adminApi = axios.create({
     baseURL: API_URL,
+    withCredentials: true,
     headers: { 'Content-Type': 'application/json' }
 });
 
-adminApi.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => Promise.reject(error)
-);
+// Removed interceptor as we now use HttpOnly cookies
+
 
 
 const fetchDashboardStats = async () => {

@@ -92,8 +92,8 @@ const UserDashboard = () => {
             to={to}
             onClick={() => setIsSidebarOpen(false)}
             className={`flex items-center gap-4 px-4 py-3 rounded-lg transition-colors duration-200 ${location.pathname.startsWith(to)
-                    ? 'bg-green-600 text-white font-semibold'
-                    : 'text-gray-600 hover:bg-green-50'
+                ? 'bg-green-600 text-white font-semibold'
+                : 'text-gray-600 hover:bg-green-50'
                 }`}
         >
             <Icon size={22} />
@@ -105,7 +105,7 @@ const UserDashboard = () => {
         <div className="flex flex-col h-full bg-white">
             <div className="p-4 flex items-center justify-between border-b">
                 <Link to="/dashboard/shop" className="flex items-center gap-2">
-                    <img src="/NepGrocery.png" alt="Hamro Grocery" className="h-12 w-auto" />
+                    <img src="/NepGrocery.png" alt="NepGrocery" className="h-12 w-auto" />
                 </Link>
                 <button onClick={() => setIsSidebarOpen(false)} className="lg:hidden text-gray-500">
                     <X size={24} />

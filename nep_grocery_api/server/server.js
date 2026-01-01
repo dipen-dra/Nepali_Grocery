@@ -6,7 +6,8 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
-import rateLimit from "express-rate-limit"; // Import rate limit
+import rateLimit from "express-rate-limit";
+import cookieParser from "cookie-parser";
 
 import { connectDB } from "./config/db.js";
 import userRoutes from "./routes/userRoutes.js";
@@ -42,7 +43,7 @@ const __dirname = path.dirname(__filename);
 
 
 const corsOptions = {
-  origin: "*",
+  origin: process.env.CLIENT_URL || "http://localhost:5173",
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
   allowedHeaders: "Content-Type, Authorization",
@@ -51,6 +52,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 // Routes
@@ -64,7 +66,7 @@ app.use("/api/payment", paymentRoutes);
 
 
 app.get("/", (req, res) => {
-  res.status(200).send("Welcome to the hamrogrocery-backend API!");
+  res.status(200).send("Welcome to the nepgrocery-backend API!");
 });
 
 

@@ -7,22 +7,15 @@ import { Loader2, Calendar, MapPin, Edit, X, Save, Edit2, User, Mail, KeyRound }
 import dayjs from 'dayjs';
 import axios from 'axios';
 
-const SERVER_BASE_URL = "http://localhost:8081";
-
+import api from '../api/api';
 
 const updateUserProfile = async (userData) => {
-    const token = localStorage.getItem('token');
-    const { data } = await axios.put(`${SERVER_BASE_URL}/api/auth/profile`, userData, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const { data } = await api.put('/auth/profile', userData);
     return data;
 };
 
 const updateUserProfilePicture = async (formData) => {
-    const token = localStorage.getItem('token');
-    const { data } = await axios.put(`${SERVER_BASE_URL}/api/auth/profile/picture`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const { data } = await api.put('/auth/profile/picture', formData);
     return data;
 };
 
@@ -52,7 +45,7 @@ const ProfileInfoField = ({ icon: Icon, label, value, isPlaceholder = false }) =
 );
 
 const ProfileInputField = ({ name, value, onChange, label, placeholder, type = "text" }) => (
-     <div>
+    <div>
         <label htmlFor={name} className="text-sm font-medium text-gray-700">{label}</label>
         <input
             id={name}
@@ -71,7 +64,7 @@ const ProfileInputField = ({ name, value, onChange, label, placeholder, type = "
 const AdminProfilePage = () => {
     const { user, updateUser } = useContext(AuthContext);
     const queryClient = useQueryClient();
-    
+
     const [isEditMode, setIsEditMode] = useState(false);
     const [formData, setFormData] = useState({ fullName: '', email: '', location: '' });
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
@@ -100,7 +93,7 @@ const AdminProfilePage = () => {
         },
         onError: (error) => toast.error(error.response?.data?.message || 'Failed to update profile.')
     });
-    
+
     const pictureUpdateMutation = useMutation({
         mutationFn: updateUserProfilePicture,
         onSuccess: (data) => {
@@ -145,14 +138,14 @@ const AdminProfilePage = () => {
             }
         );
     };
-    
+
     const handleCancelEdit = () => {
         setIsEditMode(false);
         resetFormData();
     };
 
     if (!user) {
-        return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin text-green-600" size={48}/></div>;
+        return <div className="flex justify-center items-center h-full"><Loader2 className="animate-spin text-green-600" size={48} /></div>;
     }
 
     return (
@@ -205,7 +198,7 @@ const AdminProfilePage = () => {
                                     <>
                                         <ProfileInputField name="fullName" label="Full Name" value={formData.fullName} onChange={handleInputChange} placeholder="Enter your full name" />
                                         <ProfileInputField name="email" label="Email Address" type="email" value={formData.email} onChange={handleInputChange} placeholder="Enter your email" />
-                                        
+
                                         {/* Location Input with Button */}
                                         <div>
                                             <label htmlFor="location" className="text-sm font-medium text-gray-700">Location</label>

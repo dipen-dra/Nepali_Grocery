@@ -2,17 +2,16 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { CartContext } from '../context/CartContext.jsx';
-import { AuthContext } from '../auth/AuthContext.jsx'; 
+import { AuthContext } from '../auth/AuthContext.jsx';
 import { placeOrder } from '../services/userServices.js';
 import { toast } from 'react-toastify';
 import { Loader2, MapPin, Gift } from 'lucide-react';
 import axios from 'axios';
 
+import api from '../api/api';
+
 const initiateEsewa = async (payload) => {
-    const token = localStorage.getItem('token');
-    const { data } = await axios.post('http://localhost:8081/api/payment/initiate-esewa', payload, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const { data } = await api.post('/payment/initiate-esewa', payload);
     return data;
 };
 
@@ -36,18 +35,18 @@ const CheckoutPage = () => {
             navigate('/checkout', { replace: true });
         }
     }, [location.search, navigate]);
-    
+
     const handleDiscountToggle = () => canApplyDiscount && setApplyDiscount(prev => !prev);
-    
+
     const fetchAddressFromCoords = async (lat, lon) => {
         setIsFetchingLocation(true);
         try {
             const { data } = await axios.get(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`);
             if (data?.display_name) setAddress(data.display_name);
-        } catch (error) { toast.error("Could not fetch address."); } 
+        } catch (error) { toast.error("Could not fetch address."); }
         finally { setIsFetchingLocation(false); }
     };
-    
+
     const handleFetchLocation = () => {
         if (navigator.geolocation) {
             setIsFetchingLocation(true);
@@ -142,13 +141,13 @@ const CheckoutPage = () => {
                             <div className="mt-4 p-3 bg-green-50 border-l-4 border-green-500 rounded-lg cursor-pointer" onClick={handleDiscountToggle}>
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <Gift className="text-green-600" size={24}/>
+                                        <Gift className="text-green-600" size={24} />
                                         <div>
                                             <h4 className="font-bold text-green-800">Use 25% Discount</h4>
                                             <p className="text-xs text-gray-600">You have {user.groceryPoints} points</p>
                                         </div>
                                     </div>
-                                    <input type="checkbox" checked={applyDiscount} readOnly className="h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500"/>
+                                    <input type="checkbox" checked={applyDiscount} readOnly className="h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500" />
                                 </div>
                             </div>
                         )}
@@ -169,7 +168,7 @@ const CheckoutPage = () => {
                         <div className="mt-6 border-t pt-4">
                             <h3 className="font-semibold text-center mb-3">Payment Method</h3>
                             <div className="space-y-3">
-                                 <div onClick={() => setPaymentMethod('cod')} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'cod' ? 'ring-2 ring-green-500 bg-green-50' : 'hover:bg-gray-50'}`}>
+                                <div onClick={() => setPaymentMethod('cod')} className={`flex items-center p-3 border rounded-lg cursor-pointer transition-all ${paymentMethod === 'cod' ? 'ring-2 ring-green-500 bg-green-50' : 'hover:bg-gray-50'}`}>
                                     <input type="radio" id="cod" name="paymentMethod" value="cod" checked={paymentMethod === 'cod'} readOnly className="h-4 w-4 text-green-600" />
                                     <label htmlFor="cod" className="ml-3 text-sm font-medium text-gray-700">Cash on Delivery</label>
                                 </div>

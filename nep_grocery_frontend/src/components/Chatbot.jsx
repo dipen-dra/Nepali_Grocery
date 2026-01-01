@@ -3,16 +3,11 @@ import React, { useState, useRef, useEffect, useContext } from 'react';
 import { Bot, X, Send, User, Loader2, MessageSquare } from 'lucide-react';
 import { AuthContext } from '../auth/AuthContext';
 import { useQueries } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../api/api';
 
-const SERVER_BASE_URL = "http://localhost:8081";
-
-const fetchData = async (endpoint, token) => {
-    if (!token) return null;
+const fetchData = async (endpoint) => {
     try {
-        const { data } = await axios.get(`${SERVER_BASE_URL}/api${endpoint}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        const { data } = await api.get(endpoint);
         if (endpoint === '/admin/users') return data.data;
         if (endpoint.includes('/orders')) return data.orders || data.history;
         return data;
@@ -39,19 +34,18 @@ const ADMIN_SUGGESTIONS = [
 export const Chatbot = ({ isVisible, onClose, cartItems = [] }) => {
     const { user } = useContext(AuthContext);
     const isAdmin = user?.role === 'admin';
-    const token = localStorage.getItem('token');
 
     const results = useQueries({
         queries: [
-            { queryKey: ['chatbot_dashboardStats'], queryFn: () => fetchData('/dashboard/stats', token), enabled: isVisible && isAdmin },
-            { queryKey: ['chatbot_all_orders'], queryFn: () => fetchData('/orders', token), enabled: isVisible && isAdmin },
-            { queryKey: ['chatbot_users'], queryFn: () => fetchData('/admin/users', token), enabled: isVisible && isAdmin },
-            { queryKey: ['chatbot_products'], queryFn: () => fetchData('/products', token), enabled: isVisible },
-            { queryKey: ['chatbot_my_orders'], queryFn: () => fetchData('/orders/myorders', token), enabled: isVisible && !isAdmin }
+            { queryKey: ['chatbot_dashboardStats'], queryFn: () => fetchData('/dashboard/stats'), enabled: isVisible && isAdmin },
+            { queryKey: ['chatbot_all_orders'], queryFn: () => fetchData('/orders'), enabled: isVisible && isAdmin },
+            { queryKey: ['chatbot_users'], queryFn: () => fetchData('/admin/users'), enabled: isVisible && isAdmin },
+            { queryKey: ['chatbot_products'], queryFn: () => fetchData('/products'), enabled: isVisible },
+            { queryKey: ['chatbot_my_orders'], queryFn: () => fetchData('/orders/myorders'), enabled: isVisible && !isAdmin }
         ],
     });
-    
-    const [ dashboardStatsResult, allOrdersResult, usersResult, productsResult, myOrdersResult ] = results;
+
+    const [dashboardStatsResult, allOrdersResult, usersResult, productsResult, myOrdersResult] = results;
     const isLoadingData = results.some(result => result.isLoading && result.fetchStatus !== 'idle');
 
     const [messages, setMessages] = useState([]);
@@ -72,33 +66,33 @@ export const Chatbot = ({ isVisible, onClose, cartItems = [] }) => {
     }, [messages]);
 
     const getLocalBotResponse = (userInput) => {
-        
+
         if (results.length === 0) {
-             return "I'm getting ready, please wait a moment...";
+            return "I'm getting ready, please wait a moment...";
         }
-        
+
         const lowerInput = userInput.toLowerCase();
-        
-        
+
+
         if (isAdmin) {
-             if (lowerInput.includes('performance') || lowerInput.includes('summarize')) {
+            if (lowerInput.includes('performance') || lowerInput.includes('summarize')) {
                 const stats = dashboardStatsResult?.data;
                 if (!stats) return "Sorry, I can't get performance stats right now.";
                 return `Today's Summary:\n- Revenue: $${stats.totalRevenue?.toFixed(2)}\n- Orders: ${stats.totalOrders}\n- New Customers: ${stats.newCustomers}`;
             }
             if (lowerInput.includes('low on stock') || lowerInput.includes('low stock')) {
-                 const products = productsResult?.data;
-                 if (!products) return "I can't access product data right now.";
-                 const lowStockProducts = products.filter(p => p.stock < 10);
-                 if (lowStockProducts.length === 0) return "Great news! No products are low on stock.";
-                 return `Low stock products:\n${lowStockProducts.map(p => `- ${p.name} (Stock: ${p.stock})`).join('\n')}`;
+                const products = productsResult?.data;
+                if (!products) return "I can't access product data right now.";
+                const lowStockProducts = products.filter(p => p.stock < 10);
+                if (lowStockProducts.length === 0) return "Great news! No products are low on stock.";
+                return `Low stock products:\n${lowStockProducts.map(p => `- ${p.name} (Stock: ${p.stock})`).join('\n')}`;
             }
             if (lowerInput.includes('pending orders')) {
                 const allOrders = allOrdersResult?.data;
                 if (!allOrders) return "I can't access order data right now.";
                 const pendingOrders = allOrders.filter(o => o.status === 'Pending');
                 if (pendingOrders.length === 0) return "There are no pending orders.";
-                
+
                 const orderList = pendingOrders.map(o => {
                     const userName = o.user ? o.user.fullName : 'Guest';
                     return `- Order #${o._id.slice(-6)} by ${userName}`;
@@ -107,7 +101,7 @@ export const Chatbot = ({ isVisible, onClose, cartItems = [] }) => {
             }
         }
 
-        
+
         if (!isAdmin) {
             if (lowerInput.includes('cart')) {
                 if (cartItems.length === 0) return "Your cart is empty.";
@@ -116,12 +110,12 @@ export const Chatbot = ({ isVisible, onClose, cartItems = [] }) => {
             if (lowerInput.includes('last order') || lowerInput.includes('order status')) {
                 const myOrders = myOrdersResult?.data;
                 if (!myOrders || myOrders.length === 0) return "You haven't placed any orders yet.";
-                const lastOrder = myOrders[0]; 
+                const lastOrder = myOrders[0];
                 return `Your last order (#${lastOrder._id.slice(-6)}) has a status of: **${lastOrder.status}**.`;
             }
         }
 
-        
+
         if (lowerInput.includes('stock') || lowerInput.includes('do you have')) {
             const products = productsResult?.data;
             if (!products) return "Sorry, I can't check stock right now.";
@@ -132,7 +126,7 @@ export const Chatbot = ({ isVisible, onClose, cartItems = [] }) => {
             return "I couldn't find that product. Please try a different name.";
         }
 
-        
+
         return "Sorry, I didn't understand that. Please choose one of the options below.";
     };
 
@@ -140,7 +134,7 @@ export const Chatbot = ({ isVisible, onClose, cartItems = [] }) => {
         if (!messageText.trim() || isLoadingResponse) return;
 
         const userMessage = { role: 'user', text: messageText };
-       
+
         setMessages(prev => prev.map(m => ({ ...m, suggestions: undefined })));
         setMessages(prev => [...prev, userMessage]);
 
@@ -149,10 +143,10 @@ export const Chatbot = ({ isVisible, onClose, cartItems = [] }) => {
 
         setTimeout(() => {
             const botText = getLocalBotResponse(messageText);
-            
+
             const nextSuggestions = isAdmin ? ADMIN_SUGGESTIONS : USER_SUGGESTIONS;
             const botResponse = { role: 'bot', text: botText, suggestions: nextSuggestions };
-            
+
             setMessages(prev => [...prev, botResponse]);
             setIsLoadingResponse(false);
         }, 500);
@@ -176,10 +170,10 @@ export const Chatbot = ({ isVisible, onClose, cartItems = [] }) => {
             </div>
             {/* Messages */}
             <div className="flex-1 p-4 overflow-y-auto bg-gray-50">
-                 <div className="space-y-4">
+                <div className="space-y-4">
                     {messages.map((msg, index) => (
-                         <div key={index} className={`flex items-end gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            {msg.role === 'bot' && <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center shrink-0"><Bot size={20} className="text-white"/></div>}
+                        <div key={index} className={`flex items-end gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            {msg.role === 'bot' && <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center shrink-0"><Bot size={20} className="text-white" /></div>}
                             <div className={`max-w-xs px-4 py-2.5 rounded-2xl shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-lg' : 'bg-white text-gray-800 border border-gray-100 rounded-bl-lg'}`}>
                                 <p className="text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: msg.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}></p>
                                 {msg.suggestions && !isLoadingResponse && (
@@ -192,12 +186,12 @@ export const Chatbot = ({ isVisible, onClose, cartItems = [] }) => {
                                     </div>
                                 )}
                             </div>
-                            {msg.role === 'user' && <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0"><User size={20} className="text-white"/></div>}
+                            {msg.role === 'user' && <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0"><User size={20} className="text-white" /></div>}
                         </div>
                     ))}
                     {(isLoadingResponse || isLoadingData) && (
                         <div className="flex items-end gap-2.5 justify-start">
-                            <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center"><Bot size={20} className="text-white"/></div>
+                            <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center"><Bot size={20} className="text-white" /></div>
                             <div className="max-w-xs px-4 py-3 rounded-2xl bg-white border border-gray-100 shadow-sm">
                                 <Loader2 className="animate-spin text-gray-500" />
                             </div>
@@ -209,7 +203,7 @@ export const Chatbot = ({ isVisible, onClose, cartItems = [] }) => {
             {/* Input */}
             <div className="p-4 border-t border-gray-200">
                 <div className="flex items-center gap-2">
-                    <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Ask me or choose an option" className="flex-1 px-4 py-2 bg-gray-100 border border-gray-300 rounded-full focus:ring-2 focus:ring-green-500"/>
+                    <input type="text" value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && handleSend()} placeholder="Ask me or choose an option" className="flex-1 px-4 py-2 bg-gray-100 border border-gray-300 rounded-full focus:ring-2 focus:ring-green-500" />
                     <button onClick={() => handleSend()} disabled={isLoadingResponse || isLoadingData || !input.trim()} className="p-3 bg-green-600 text-white rounded-full hover:bg-green-700 disabled:opacity-50"><Send size={20} /></button>
                 </div>
             </div>

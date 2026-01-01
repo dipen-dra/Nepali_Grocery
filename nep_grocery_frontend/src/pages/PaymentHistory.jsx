@@ -1,23 +1,17 @@
 import React, { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import axios from 'axios';
+import api from '../api/api';
 import dayjs from 'dayjs';
 import { Loader2, AlertTriangle, CreditCard, CheckCircle2, XCircle, Clock } from 'lucide-react';
 
-const SERVER_BASE_URL = "http://localhost:8081";
-
-
 const fetchPaymentHistory = async () => {
-    const token = localStorage.getItem('token');
-    const { data } = await axios.get(`${SERVER_BASE_URL}/api/orders/payment-history`, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const { data } = await api.get('/orders/payment-history');
     return data.history;
 };
 
 
 const getStatusChip = (paymentItem) => {
-    
+
     if (paymentItem.status === 'Cancelled' && paymentItem.transactionId) {
         return (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
@@ -27,7 +21,7 @@ const getStatusChip = (paymentItem) => {
         );
     }
 
-    
+
     if (paymentItem.status === 'Cancelled') {
         return (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
@@ -36,8 +30,8 @@ const getStatusChip = (paymentItem) => {
             </span>
         );
     }
-    
-    
+
+
     if (paymentItem.paymentMethod === 'COD' && paymentItem.status === 'Delivered') {
         return (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
@@ -47,7 +41,7 @@ const getStatusChip = (paymentItem) => {
         );
     }
 
-    
+
     if (paymentItem.transactionId) {
         return (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
@@ -57,7 +51,7 @@ const getStatusChip = (paymentItem) => {
         );
     }
 
-    
+
     return (
         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
             <Clock size={14} />
@@ -80,7 +74,7 @@ export const PaymentHistoryPage = () => {
     if (isLoading) {
         return <div className="flex justify-center items-center py-12"><Loader2 className="animate-spin text-green-600" size={32} /></div>;
     }
-    
+
     if (isError) {
         return <div className="flex flex-col items-center justify-center py-12 text-red-600 bg-red-50 rounded-lg">
             <AlertTriangle size={32} />
@@ -117,7 +111,7 @@ export const PaymentHistoryPage = () => {
                             ) : (
                                 <tr>
                                     <td colSpan="5" className="text-center py-12 text-gray-500">
-                                        <CreditCard className="mx-auto mb-2 text-gray-400" size={32}/>
+                                        <CreditCard className="mx-auto mb-2 text-gray-400" size={32} />
                                         No payment records found.
                                     </td>
                                 </tr>

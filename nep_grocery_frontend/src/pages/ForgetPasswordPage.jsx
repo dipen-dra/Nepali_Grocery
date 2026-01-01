@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api/api';
 import { toast } from 'react-toastify';
 import Lottie from "lottie-react";
 import forgotPasswordAnimation from '../assets/forgot-password-animation.json';
@@ -34,7 +34,7 @@ const ForgotPasswordPage = () => {
         setLoading(true);
 
         try {
-            const response = await axios.post('/api/auth/forgot-password', { email });
+            const response = await api.post('/auth/forgot-password', { email });
             toast.success(response.data.message || "Reset link sent!");
             setIsSubmitted(true);
         } catch (err) {

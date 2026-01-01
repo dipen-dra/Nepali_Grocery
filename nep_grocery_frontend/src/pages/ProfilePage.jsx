@@ -9,22 +9,16 @@ import { MyOrdersPage } from './MyOrderPage.jsx';
 import { PaymentHistoryPage } from './PaymentHistory.jsx';
 import { fetchUserProfile } from '../services/userServices.js';
 
-const SERVER_BASE_URL = "http://localhost:8081";
+import api from '../api/api';
 
 // API functions for mutations
 const updateUserProfile = async (userData) => {
-    const token = localStorage.getItem('token');
-    const { data } = await axios.put(`${SERVER_BASE_URL}/api/auth/profile`, userData, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const { data } = await api.put('/auth/profile', userData);
     return data;
 };
 
 const updateUserProfilePicture = async (formData) => {
-    const token = localStorage.getItem('token');
-    const { data } = await axios.put(`${SERVER_BASE_URL}/api/auth/profile/picture`, formData, {
-        headers: { Authorization: `Bearer ${token}` }
-    });
+    const { data } = await api.put('/auth/profile/picture', formData);
     return data;
 };
 
@@ -148,9 +142,8 @@ const ProfilePage = () => {
     const TabButton = ({ tabName, icon: Icon, label }) => (
         <button
             onClick={() => setActiveTab(tabName)}
-            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === tabName ? 'bg-green-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-lg transition-all ${activeTab === tabName ? 'bg-green-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'
+                }`}
         >
             <Icon size={18} />
             {label}
@@ -158,15 +151,15 @@ const ProfilePage = () => {
     );
 
     if (isUserLoading && !initialUser) {
-        return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin text-green-600" size={48}/></div>;
+        return <div className="flex justify-center items-center h-screen"><Loader2 className="animate-spin text-green-600" size={48} /></div>;
     }
-    
+
     if (userError) {
         return <div className="text-center p-8 text-red-500">Error fetching profile: {userError.message}</div>;
     }
 
     if (!user) {
-         return <div className="text-center p-8">Could not load user profile.</div>;
+        return <div className="text-center p-8">Could not load user profile.</div>;
     }
 
     const points = user.groceryPoints || 0;

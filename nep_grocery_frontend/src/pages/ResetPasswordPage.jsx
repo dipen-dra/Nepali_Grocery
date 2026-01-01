@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import logo from '../assets/hamro2.png';
+import api from '../api/api';
+// import logo from '../assets/hamro2.png'; // Unused
+const logo = "/NepGrocery.png";
+
+// ... inside component ...
+<img src={logo} alt="NepGrocery" className="h-16 w-auto" />
 
 const Link = ({ to, children, ...props }) => <a href={to} {...props}>{children}</a>;
 const EyeIcon = ({ className }) => (
@@ -28,14 +33,39 @@ const ResetPasswordPage = () => {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
+    const [passwordStrength, setPasswordStrength] = useState('');
+
+    const calculateStrength = (password) => {
+        let strength = 0;
+        if (password.length >= 8) strength += 1;
+        if (/[A-Z]/.test(password)) strength += 1;
+        if (/[a-z]/.test(password)) strength += 1;
+        if (/[0-9]/.test(password)) strength += 1;
+        if (/[^A-Za-z0-9]/.test(password)) strength += 1;
+
+        if (strength === 0) return '';
+        if (strength < 3) return 'Weak';
+        if (strength < 5) return 'Medium';
+        return 'Strong';
+    };
+
+    const handlePasswordChange = (e) => {
+        const value = e.target.value;
+        setPassword(value);
+        setPasswordStrength(calculateStrength(value));
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setSuccess('');
 
-        if (password.length < 6) {
-            setError("Password must be at least 6 characters long.");
+        if (password.length < 8) {
+            setError("Password must be at least 8 characters long.");
+            return;
+        }
+        if (passwordStrength !== 'Strong') {
+            setError("Please choose a strong password (min 8 chars, uppercase, number, & symbol).");
             return;
         }
         if (password !== confirmPassword) {
@@ -46,7 +76,7 @@ const ResetPasswordPage = () => {
         setLoading(true);
         try {
 
-            const response = await axios.post(`/api/auth/reset-password/${token}`, { password });
+            const response = await api.post(`/auth/reset-password/${token}`, { password });
             setSuccess(response.data.message);
 
             setTimeout(() => {
@@ -65,7 +95,7 @@ const ResetPasswordPage = () => {
         <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
             <div className="w-full max-w-md bg-white shadow-xl rounded-2xl p-8 space-y-6">
                 <div className="flex justify-center mb-6">
-                    <img src="/NepGrocery.png" alt="Hamro Grocery" className="h-16 w-auto" />
+                    <img src={logo} alt="NepGrocery" className="h-16 w-auto" />
                 </div>
                 <div className="text-center">
                     <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Create New Password</h2>
@@ -86,7 +116,7 @@ const ResetPasswordPage = () => {
                                     id="password"
                                     type={passwordVisible ? "text" : "password"}
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={handlePasswordChange}
                                     required
                                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                 />
@@ -94,6 +124,19 @@ const ResetPasswordPage = () => {
                                     {passwordVisible ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
                                 </button>
                             </div>
+                            {/* Password Strength Meter */}
+                            {password && (
+                                <div className="mt-2">
+                                    <div className="flex items-center space-x-2 mb-1">
+                                        <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${passwordStrength === 'Weak' ? 'bg-red-500' : passwordStrength === 'Medium' ? 'bg-yellow-500' : passwordStrength === 'Strong' ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                                        <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${passwordStrength === 'Medium' || passwordStrength === 'Strong' ? (passwordStrength === 'Medium' ? 'bg-yellow-500' : 'bg-green-500') : 'bg-gray-200'}`}></div>
+                                        <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${passwordStrength === 'Strong' ? 'bg-green-500' : 'bg-gray-200'}`}></div>
+                                    </div>
+                                    <p className={`text-xs font-semibold text-right ${passwordStrength === 'Weak' ? 'text-red-500' : passwordStrength === 'Medium' ? 'text-yellow-600' : 'text-green-600'}`}>
+                                        {passwordStrength && `${passwordStrength} Password`}
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         <div>
@@ -116,7 +159,7 @@ const ResetPasswordPage = () => {
                         {error && <p className="text-sm text-red-600 text-center">{error}</p>}
 
                         <div>
-                            <button type="submit" disabled={loading} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-700 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50">
+                            <button type="submit" disabled={loading || passwordStrength !== 'Strong'} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-700 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
                                 {loading ? 'Resetting...' : 'Reset Password'}
                             </button>
                         </div>

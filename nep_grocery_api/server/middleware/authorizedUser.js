@@ -4,14 +4,20 @@ import User from '../models/User.js';
 export const authenticateUser = async (req, res, next) => {
     const authHeader = req.headers.authorization;
 
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+
+    let token = null;
+
+    if (req.cookies && req.cookies.token) {
+        token = req.cookies.token;
+    } else if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.split(" ")[1];
+    }
+
+    if (!token) {
         return res.status(401).json({ success: false, message: "Authentication failed: No token provided." });
     }
 
     try {
-        const token = authHeader.split(" ")[1];
-        
-        
         if (!process.env.SECRET) {
             throw new Error('JWT Secret is not defined. Cannot verify token.');
         }

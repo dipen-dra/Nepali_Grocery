@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, loginUser, getUserProfile, updateUserProfilePicture, updateUserProfile,sendResetLink,resetPassword } from '../controllers/userController.js';
+import { registerUser, loginUser, logoutUser, getUserProfile, updateUserProfilePicture, updateUserProfile, sendResetLink, resetPassword } from '../controllers/userController.js';
 import { authenticateUser } from '../middleware/authorizedUser.js';
 import multerUpload from '../middleware/multerUpload.js';
 
@@ -8,6 +8,7 @@ const router = express.Router();
 // --- PUBLIC ROUTES ---
 router.post('/register', registerUser);
 router.post('/login', loginUser);
+router.post('/logout', logoutUser);
 
 // --- PROTECTED ROUTES ---
 router.get('/profile', authenticateUser, getUserProfile);
