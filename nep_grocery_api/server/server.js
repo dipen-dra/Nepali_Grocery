@@ -23,14 +23,24 @@ dotenv.config();
 
 const app = express();
 
+const corsOptions = {
+  origin: process.env.CLIENT_URL || "http://localhost:5173",
+  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
+  credentials: true,
+  allowedHeaders: "Content-Type, Authorization",
+};
+
 // Rate Limiting Configuration
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per `window` (here, per 15 minutes)
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  max: 1000, // Increased limit for development
+  standardHeaders: true,
+  legacyHeaders: false,
   message: 'Too many requests from this IP, please try again after 15 minutes',
 });
+
+// Apply CORS globally before rate limiting
+app.use(cors(corsOptions));
 
 // Apply rate limiting to all requests
 app.use(limiter);
@@ -42,15 +52,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 
-const corsOptions = {
-  origin: process.env.CLIENT_URL || "http://localhost:5173",
-  methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
-  credentials: true,
-  allowedHeaders: "Content-Type, Authorization",
-};
 
 
-app.use(cors(corsOptions));
+
+// app.use(cors(corsOptions)); // Moved up
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));

@@ -16,6 +16,7 @@ import { ConfirmationModal } from '../components/ConfirmationModal';
 import { useQuery } from '@tanstack/react-query';
 import { useChatbot } from '../hooks/useChatbot.jsx';
 import { Chatbot } from '../components/Chatbot.jsx';
+import NotFoundPage from './NotFoundPage.jsx';
 
 const CategoryNavbar = ({ selectedCategory, onCategoryChange }) => {
     const { data: categories, isLoading } = useQuery({ queryKey: ['categories'], queryFn: fetchCategories });
@@ -178,7 +179,7 @@ const UserDashboard = () => {
                         <Route path="payments" element={<PaymentHistoryPage />} />
                         <Route path="cart" element={<CartPage />} />
                         <Route path="checkout" element={<CheckoutPage />} />
-                        <Route path="*" element={<Navigate to="shop" replace />} />
+                        <Route path="*" element={<NotFoundPage />} />
                     </Routes>
                 </main>
 

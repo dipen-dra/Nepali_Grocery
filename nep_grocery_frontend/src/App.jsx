@@ -12,8 +12,7 @@ import CheckoutPage from './pages/CheckoutPage.jsx';
 import ForgotPasswordPage from './pages/ForgetPasswordPage.jsx';
 import ResetPasswordPage from './pages/ResetPasswordPage.jsx';
 import { PaymentSuccessPage } from './pages/PaymentSuccessPage.jsx';
-// If still using the old EsewaVerifyPage, uncomment the below line instead:
-// import EsewaVerifyPage from './pages/EsewaVerifyPage.jsx';
+import NotFoundPage from './pages/NotFoundPage.jsx';
 
 export default function App() {
   const { user } = useContext(AuthContext);
@@ -50,16 +49,6 @@ export default function App() {
         }
       />
 
-      {/* If you're still using EsewaVerifyPage instead, use this instead:
-      <Route
-        path="/payment/verify"
-        element={
-          <ProtectedRoute>
-            <EsewaVerifyPage />
-          </ProtectedRoute>
-        }
-      /> */}
-
       {/* --- ADMIN DASHBOARD --- */}
       <Route
         path="/admin/dashboard"
@@ -81,7 +70,7 @@ export default function App() {
       />
 
       {/* --- CATCH-ALL ROUTE --- */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
