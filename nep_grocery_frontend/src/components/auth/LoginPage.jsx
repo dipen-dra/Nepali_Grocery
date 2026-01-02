@@ -54,11 +54,20 @@ const LoginPage = () => {
         } catch (error) {
             setIsLoading(false);
             const errorMessage = error.response?.data?.message || 'Login failed.';
+            const headers = error.response?.headers;
 
-            // Rate Limit Feedback
-            if (error.response?.headers?.['ratelimit-remaining']) {
-                const remaining = error.response.headers['ratelimit-remaining'];
-                toast.error(`${errorMessage} Attempts left: ${remaining}`);
+            if (headers) {
+                const remaining = headers['ratelimit-remaining'];
+                const reset = headers['ratelimit-reset'];
+
+                if (remaining === '0' || error.response?.status === 429) {
+                    const minutesLeft = Math.ceil(reset / 60);
+                    toast.error(`IP blocked due to too many requests. Please try again in ${minutesLeft} minutes.`);
+                } else if (remaining) {
+                    toast.error(`${errorMessage} Attempts left: ${remaining}`);
+                } else {
+                    toast.error(errorMessage);
+                }
             } else {
                 toast.error(errorMessage);
             }
@@ -81,11 +90,20 @@ const LoginPage = () => {
         } catch (error) {
             setIsLoading(false);
             const errorMessage = error.response?.data?.message || 'Verification failed.';
+            const headers = error.response?.headers;
 
-            // OTP Rate Limit Feedback
-            if (error.response?.headers?.['ratelimit-remaining']) {
-                const remaining = error.response.headers['ratelimit-remaining'];
-                toast.error(`${errorMessage} Attempts left: ${remaining}`);
+            if (headers) {
+                const remaining = headers['ratelimit-remaining'];
+                const reset = headers['ratelimit-reset'];
+
+                if (remaining === '0' || error.response?.status === 429) {
+                    const minutesLeft = Math.ceil(reset / 60);
+                    toast.error(`IP blocked due to too many requests. Please try again in ${minutesLeft} minutes.`);
+                } else if (remaining) {
+                    toast.error(`${errorMessage} Attempts left: ${remaining}`);
+                } else {
+                    toast.error(errorMessage);
+                }
             } else {
                 toast.error(errorMessage);
             }
@@ -102,10 +120,20 @@ const LoginPage = () => {
             startResendTimer();
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Failed to resend code.';
-            // Resend Rate Limit Feedback
-            if (error.response?.headers?.['ratelimit-remaining']) {
-                const remaining = error.response.headers['ratelimit-remaining'];
-                toast.error(`${errorMessage} Attempts left: ${remaining}`);
+            const headers = error.response?.headers;
+
+            if (headers) {
+                const remaining = headers['ratelimit-remaining'];
+                const reset = headers['ratelimit-reset'];
+
+                if (remaining === '0' || error.response?.status === 429) {
+                    const minutesLeft = Math.ceil(reset / 60);
+                    toast.error(`Request limit reached. Please wait ${minutesLeft} minutes.`);
+                } else if (remaining) {
+                    toast.error(`${errorMessage} Attempts left: ${remaining}`);
+                } else {
+                    toast.error(errorMessage);
+                }
             } else {
                 toast.error(errorMessage);
             }
