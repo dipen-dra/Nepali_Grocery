@@ -8,8 +8,8 @@ const ESEWA_URL = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
 const ESEWA_SCD = 'EPAYTEST';
 const ESEWA_SECRET = '8gBm/:&EnhH.1/q';
 
-const FRONTEND_SUCCESS_URL = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-success`;
-const FRONTEND_FAILURE_URL = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/checkout`;
+const FRONTEND_SUCCESS_URL = `${process.env.FRONTEND_URL || 'http://192.168.1.110:5173'}/payment-success`;
+const FRONTEND_FAILURE_URL = `${process.env.FRONTEND_URL || 'http://192.168.1.110:5173'}/checkout`;
 
 import { calculateOrderDetails } from '../utils/orderHelper.js';
 
@@ -72,7 +72,7 @@ export const initiateEsewaPayment = async (req, res) => {
             product_code: ESEWA_SCD,
             signature: signature,
             signed_field_names: 'total_amount,transaction_uuid,product_code',
-            success_url: `${process.env.BACKEND_URL || 'http://localhost:8081'}/api/payment/esewa/verify`,
+            success_url: `${process.env.BACKEND_URL || 'http://192.168.1.110:8081'}/api/payment/esewa/verify`,
             failure_url: `${FRONTEND_FAILURE_URL}?payment=failure`,
         };
 
@@ -149,7 +149,7 @@ export const verifyEsewaPayment = async (req, res) => {
                 return res.redirect(`${FRONTEND_SUCCESS_URL}?message=${encodeURIComponent(messageParts.join(' '))}`);
             }
 
-            return res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:5173'}/dashboard/orders`);
+            return res.redirect(`${process.env.FRONTEND_URL || 'http://192.168.1.110:5173'}/dashboard/orders`);
         } else {
             await Order.findOneAndDelete({ transactionId: decodedData.transaction_uuid });
             return res.redirect(`${FRONTEND_FAILURE_URL}?payment=failure&message=${encodeURIComponent('Transaction verification failed.')}`);

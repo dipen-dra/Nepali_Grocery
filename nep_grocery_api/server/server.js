@@ -24,10 +24,14 @@ dotenv.config();
 const app = express();
 
 const corsOptions = {
-  origin: process.env.CLIENT_URL || "http://localhost:5173",
+  origin: [
+    "http://localhost:5173",
+    "http://192.168.1.110:5173",
+    process.env.CLIENT_URL
+  ].filter(Boolean),
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
-  allowedHeaders: "Content-Type, Authorization",
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 // Rate Limiting Configuration
@@ -80,7 +84,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 8081;
 const server = app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT} and http://192.168.1.110:${PORT}`);
 });
 
 
