@@ -70,6 +70,7 @@ export const calculateOrderDetails = async (items, user, applyDiscount) => {
     let pointsToDeduct = 0;
 
     if (applyDiscount && user.groceryPoints >= 150) {
+        // Hardcoded 25% discount ensures backend integrity and prevents client-side tampering
         const discountAmount = itemsTotal * 0.25;
         finalAmount -= discountAmount;
         discountAppliedFlag = true;
