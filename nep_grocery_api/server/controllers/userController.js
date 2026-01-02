@@ -317,6 +317,7 @@ export const loginUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "Captcha token is missing." });
         }
 
+        // Verify Captcha with Google's API to ensure the request is from a human
         const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`;
         const captchaResponse = await fetch(verificationUrl, { method: 'POST' });
         const captchaData = await captchaResponse.json();
