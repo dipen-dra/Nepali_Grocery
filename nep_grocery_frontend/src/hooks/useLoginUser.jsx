@@ -20,7 +20,11 @@ const useLoginUser = () => {
             }
         },
         onError: (error) => {
-            toast.error(error.message || "Login failed. Please check your credentials.");
+            if (error.status === 429) {
+                toast.error("Too many login attempts. Please try again after 15 minutes.");
+            } else {
+                toast.error(error.message || "Login failed. Please check your credentials.");
+            }
         }
     });
 

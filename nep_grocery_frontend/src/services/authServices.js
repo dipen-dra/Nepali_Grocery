@@ -15,6 +15,10 @@ export const loginUserService = async (formData) => {
         const response = await loginUserApi(formData);
         return response.data;
     } catch (error) {
-        throw error.response?.data || { message: "Login has failed." };
+        if (error.response) {
+            // Throw custom object with status and data
+            throw { status: error.response.status, ...error.response.data };
+        }
+        throw { message: "Login has failed." };
     }
 };

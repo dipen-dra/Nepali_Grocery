@@ -5,9 +5,11 @@ import multerUpload from '../middleware/multerUpload.js';
 
 const router = express.Router();
 
+import { loginLimiter } from '../middleware/loginLimiter.js';
+
 // --- PUBLIC ROUTES ---
 router.post('/register', registerUser);
-router.post('/login', loginUser);
+router.post('/login', loginLimiter, loginUser);
 router.post('/logout', logoutUser);
 
 // --- PROTECTED ROUTES ---
