@@ -46,9 +46,8 @@ const LoginPage = () => {
                 startResendTimer();
             } else {
                 // Standard Login Success
-                login(data.token, data.data);
+                login(data);
                 toast.success('Login successful!');
-                navigate('/'); // Or dashboard
                 setIsLoading(false);
             }
         } catch (error) {
@@ -84,9 +83,8 @@ const LoginPage = () => {
         setIsLoading(true);
         try {
             const { data } = await api.post('/auth/verify-otp', { userId, otp });
-            login(data.token, data.data);
+            login(data);
             toast.success('Verification successful!');
-            navigate('/');
         } catch (error) {
             setIsLoading(false);
             const errorMessage = error.response?.data?.message || 'Verification failed.';
