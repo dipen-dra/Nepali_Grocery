@@ -267,9 +267,35 @@ const createUserData = (user) => ({
 
 // Register new user
 export const registerUser = async (req, res) => {
-    const { email, fullName, password } = req.body;
+    const { email, fullName, password, captchaToken } = req.body;
     if (!email || !fullName || !password) {
         return res.status(400).json({ success: false, message: "Please fill all fields." });
+    }
+
+    if (!captchaToken) {
+        return res.status(400).json({ success: false, message: "Captcha token is missing." });
+    }
+
+    // Verify Captcha with Google's API to ensure the request is from a human
+    const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`;
+    const captchaResponse = await fetch(verificationUrl, { method: 'POST' });
+    const captchaData = await captchaResponse.json();
+
+    if (!captchaData.success) {
+        return res.status(400).json({ success: false, message: "Captcha verification failed. Please try again." });
+    }
+
+    // Password Validation: Cannot contain user's name
+    const nameParts = fullName.toLowerCase().split(' ');
+    const lowerPassword = password.toLowerCase();
+
+    for (const part of nameParts) {
+        if (part.length > 2 && lowerPassword.includes(part)) { // >2 chars to avoid blocking short common bits
+            return res.status(400).json({
+                success: false,
+                message: `Password cannot contain your name ("${part}"). Please choose a stronger password.`
+            });
+        }
     }
 
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
@@ -313,18 +339,7 @@ export const loginUser = async (req, res) => {
             return res.status(400).json({ success: false, message: "Email and password are required." });
         }
 
-        if (!captchaToken) {
-            return res.status(400).json({ success: false, message: "Captcha token is missing." });
-        }
 
-        // Verify Captcha with Google's API to ensure the request is from a human
-        const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`;
-        const captchaResponse = await fetch(verificationUrl, { method: 'POST' });
-        const captchaData = await captchaResponse.json();
-
-        if (!captchaData.success) {
-            return res.status(400).json({ success: false, message: "Captcha verification failed. Please try again." });
-        }
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ success: false, message: "Invalid email or password." });

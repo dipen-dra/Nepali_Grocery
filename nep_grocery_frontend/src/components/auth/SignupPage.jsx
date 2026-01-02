@@ -7,6 +7,8 @@ import Navbar from '../Navbar';
 import { useRegisterUser } from '../../hooks/useRegisterUser';
 import TermsModal from '../TermsModal';
 
+import ReCAPTCHA from "react-google-recaptcha";
+
 const SignupPage = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({ fullName: '', email: '', password: '' });
@@ -14,6 +16,7 @@ const SignupPage = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isTermsModalOpen, setTermsModalOpen] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState('');
+  const [captchaToken, setCaptchaToken] = useState(null);
 
   const calculateStrength = (password) => {
     let strength = 0;
@@ -54,7 +57,7 @@ const SignupPage = () => {
       toast.error("Please choose a strong password (min 8 chars, uppercase, number, & symbol).");
       return;
     }
-    registerUser(formData, {
+    registerUser({ ...formData, captchaToken }, {
       onSuccess: () => {
         toast.success('Registration successful! Please log in.');
         navigate('/login');
@@ -184,10 +187,18 @@ const SignupPage = () => {
                   </label>
                 </div>
 
+                {/* ReCAPTCHA */}
+                <div className="flex justify-center">
+                  <ReCAPTCHA
+                    sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
+                    onChange={(token) => setCaptchaToken(token)}
+                  />
+                </div>
+
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={isSubmitting || !agreedToTerms || passwordStrength !== 'Strong'}
+                  disabled={isSubmitting || !agreedToTerms || passwordStrength !== 'Strong' || !captchaToken}
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-lg shadow-lg hover:shadow-xl transition duration-300 transform hover:-translate-y-0.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Creating Account...' : 'Create Account'}

@@ -7,8 +7,10 @@ const router = express.Router();
 
 import { loginLimiter } from '../middleware/loginLimiter.js';
 
+import { registerLimiter } from '../middleware/registerLimiter.js';
+
 // --- PUBLIC ROUTES ---
-router.post('/register', registerUser);
+router.post('/register', registerLimiter, registerUser);
 router.post('/login', loginLimiter, loginUser);
 router.post('/logout', logoutUser);
 

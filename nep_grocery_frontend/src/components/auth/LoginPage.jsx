@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import ReCAPTCHA from "react-google-recaptcha";
 import Lottie from "lottie-react";
 import groceryAnimation from '../../assets/grocery-animation.json';
 import { useLoginUser } from '../../hooks/useLoginUser';
@@ -10,7 +9,6 @@ import Navbar from '../Navbar';
 const LoginPage = () => {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
-    const [captchaToken, setCaptchaToken] = useState(null);
     const { login: loginUser, isLoading } = useLoginUser();
 
     const handleChange = (e) => {
@@ -23,11 +21,7 @@ const LoginPage = () => {
             toast.error('Please enter both email and password.');
             return;
         }
-        if (!captchaToken) {
-            toast.error('Please complete the CAPTCHA.');
-            return;
-        }
-        loginUser({ ...formData, captchaToken });
+        loginUser(formData);
     };
 
     const togglePasswordVisibility = () => {
@@ -119,12 +113,7 @@ const LoginPage = () => {
                                     </Link>
                                 </div>
 
-                                <div className="flex justify-center">
-                                    <ReCAPTCHA
-                                        sitekey="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
-                                        onChange={(token) => setCaptchaToken(token)}
-                                    />
-                                </div>
+
 
                                 <button
                                     type="submit"
