@@ -23,16 +23,27 @@ const UserSchema = new Schema(
     },
     profilePicture: {
       type: String,
-      default: '', 
+      default: '',
     },
     location: {
-        type: String,
-        default: '',
+      type: String,
+      default: '',
     },
     // --- NEW FIELD ---
     groceryPoints: {
       type: Number,
       default: 0,
+    },
+    // --- 2FA FIELDS ---
+    twoFactorEnabled: {
+      type: Boolean,
+      default: false,
+    },
+    otp: {
+      type: String,
+    },
+    otpExpires: {
+      type: Date,
     },
   },
   { timestamps: true }

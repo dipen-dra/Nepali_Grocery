@@ -251,6 +251,7 @@ import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import crypto from 'crypto';
 
 // Helper function to create user data payload
 // Helper function to format user data
@@ -263,7 +264,38 @@ const createUserData = (user) => ({
     createdAt: user.createdAt,
     location: user.location,
     groceryPoints: user.groceryPoints,
+    twoFactorEnabled: user.twoFactorEnabled, // Added for frontend toggle state
 });
+
+const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS,
+    },
+});
+
+const sendOtpEmail = async (email, otp) => {
+    const mailOptions = {
+        from: `'NepGrocery' <${process.env.EMAIL_USER}>`,
+        to: email,
+        subject: "Your Login OTP",
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: #2c5282;">Login Verification</h2>
+                <p>Your One-Time Password (OTP) for login is:</p>
+                <h1 style="background-color: #f0fdf4; color: #15803d; padding: 20px; text-align: center; letter-spacing: 5px; border-radius: 10px;">${otp}</h1>
+                <p>This code expires in 10 minutes.</p>
+                <p style="color: #666; font-size: 12px; margin-top: 20px;">If you didn't request this, please change your password immediately.</p>
+            </div>
+        `
+    };
+    await transporter.sendMail(mailOptions);
+};
+
+const generateSecureOtp = () => {
+    return crypto.randomInt(100000, 999999).toString();
+};
 
 // Register new user
 export const registerUser = async (req, res) => {
@@ -334,11 +366,10 @@ import fetch from 'node-fetch';
 // Login
 export const loginUser = async (req, res) => {
     try {
-        const { email, password, captchaToken } = req.body;
+        const { email, password } = req.body;
         if (!email || !password) {
             return res.status(400).json({ success: false, message: "Email and password are required." });
         }
-
 
         const user = await User.findOne({ email });
         if (!user) {
@@ -348,6 +379,34 @@ export const loginUser = async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({ success: false, message: "Invalid email or password." });
         }
+
+        // --- 2FA LOGIC ---
+        if (user.twoFactorEnabled) {
+            const otp = generateSecureOtp();
+            user.otp = otp;
+            user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+            await user.save();
+
+            // Send OTP Email
+            try {
+                await sendOtpEmail(user.email, otp);
+            } catch (emailError) {
+                console.error("Failed to send OTP email:", emailError);
+                return res.status(500).json({ success: false, message: "Failed to send verification code." });
+            }
+
+            // Mask email for privacy in response
+            const maskedEmail = user.email.replace(/^(...)(.*)(@.*)$/, "$1***$3");
+
+            return res.status(200).json({
+                success: true,
+                requires2FA: true,
+                userId: user._id,
+                message: `Verification code sent to ${maskedEmail}`
+            });
+        }
+        // --- END 2FA ---
+
         const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET, { expiresIn: "1d" });
 
         // Set cookie
@@ -502,9 +561,96 @@ export const getUserProfile = async (req, res) => {
     }
 };
 
+// Verify OTP
+export const verifyOtp = async (req, res) => {
+    const { userId, otp } = req.body;
+    if (!userId || !otp) {
+        return res.status(400).json({ success: false, message: "User ID and OTP are required." });
+    }
+
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        if (!user.otp || !user.otpExpires) {
+            return res.status(400).json({ success: false, message: "No OTP request found. Please login again." });
+        }
+
+        if (Date.now() > user.otpExpires) {
+            user.otp = undefined;
+            user.otpExpires = undefined;
+            await user.save();
+            return res.status(400).json({ success: false, message: "OTP has expired. Please login again to get a new code." });
+        }
+
+        if (user.otp !== otp) {
+            return res.status(400).json({ success: false, message: "Invalid OTP. Please try again." });
+        }
+
+        // --- OTP VALID ---
+        // Clear OTP fields
+        user.otp = undefined;
+        user.otpExpires = undefined;
+        await user.save();
+
+        const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET, { expiresIn: "1d" });
+
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 24 * 60 * 60 * 1000 // 1 day
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Login successful",
+            role: user.role,
+            token,
+            data: createUserData(user),
+        });
+
+    } catch (error) {
+        console.error("OTP verification error:", error);
+        res.status(500).json({ success: false, message: "Server error during verification." });
+    }
+};
+
+// Resend OTP
+export const resendOtp = async (req, res) => {
+    const { userId } = req.body;
+    try {
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        if (!user.twoFactorEnabled) {
+            return res.status(400).json({ success: false, message: "2FA is not enabled for this account." });
+        }
+
+        const otp = generateSecureOtp();
+        user.otp = otp;
+        user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+        await user.save();
+
+        await sendOtpEmail(user.email, otp);
+
+        res.status(200).json({
+            success: true,
+            message: "New verification code sent."
+        });
+    } catch (error) {
+        console.error("Resend OTP error:", error);
+        res.status(500).json({ success: false, message: "Failed to resend OTP." });
+    }
+};
+
 // Update Profile Info
 export const updateUserProfile = async (req, res) => {
-    const { fullName, email, location } = req.body;
+    const { fullName, email, location, twoFactorEnabled } = req.body;
     try {
         const user = await User.findById(req.user._id);
         if (!user) {
@@ -522,6 +668,9 @@ export const updateUserProfile = async (req, res) => {
         user.fullName = fullName || user.fullName;
         user.email = email || user.email;
         user.location = location !== undefined ? location : user.location;
+        if (twoFactorEnabled !== undefined) {
+            user.twoFactorEnabled = twoFactorEnabled;
+        }
 
         const updatedUser = await user.save();
 
