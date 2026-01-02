@@ -11,45 +11,35 @@ const ESEWA_SECRET = '8gBm/:&EnhH.1/q';
 const FRONTEND_SUCCESS_URL = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment-success`;
 const FRONTEND_FAILURE_URL = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/checkout`;
 
+import { calculateOrderDetails } from '../utils/orderHelper.js';
+
 export const initiateEsewaPayment = async (req, res) => {
     try {
         const { cartItems, phone, address, applyDiscount } = req.body;
         const user = await User.findById(req.user._id);
 
-        if (!user || !cartItems || cartItems.length === 0) {
-            return res.status(400).json({ message: 'Invalid request.' });
+        if (!user) {
+            return res.status(400).json({ message: 'Invalid request. User not found.' });
         }
 
+        const {
+            orderItems,
+            itemsTotal,
+            finalAmount,
+            discountApplied
+        } = await calculateOrderDetails(cartItems, user, applyDiscount);
+
+        // eSewa specific fields (fixed at 0 as per previous logic for now)
         const deliveryFee = 50;
         const serviceCharge = 0;
         const taxAmount = 0;
-        let itemsTotal = 0;
-        const orderItems = [];
-        const productIds = cartItems.map(item => item._id);
-        const productsInDb = await Product.find({ '_id': { $in: productIds } });
-
-        for (const cartItem of cartItems) {
-            const product = productsInDb.find(p => p._id.toString() === cartItem._id);
-            if (!product) {
-                return res.status(404).json({ message: `Product with ID ${cartItem._id} not found.` });
-            }
-            itemsTotal += product.price * cartItem.quantity;
-            orderItems.push({
-                product: product._id,
-                name: product.name,
-                price: product.price,
-                quantity: cartItem.quantity,
-                imageUrl: product.imageUrl,
-            });
-        }
-
-        let finalAmount = itemsTotal + deliveryFee + serviceCharge + taxAmount;
-        let discountAppliedFlag = false;
-
-        if (applyDiscount && user.groceryPoints >= 150) {
-            finalAmount -= (itemsTotal * 0.25);
-            discountAppliedFlag = true;
-        }
+        // Re-cal culating finalAmount for eSewa breakdown consistency if needed, 
+        // but helper returns finalAmount = itemsTotal + deliveryFee - discount.
+        // The eSewa signature needs explicit breakdown.
+        // helper finalAmount includes deliveryFee and discount.
+        // let's verify if helper's finalAmount matches itemsTotal + deliveryFee + service + tax - discount
+        // helper: itemsTotal + 50 - discount. 
+        // eSewa logic: itemsTotal + 50 + 0 + 0 - discount. matches.
 
         const transaction_uuid = `hg-${Date.now()}`;
 
@@ -62,7 +52,7 @@ export const initiateEsewaPayment = async (req, res) => {
             status: 'Pending Payment',
             paymentMethod: 'eSewa',
             transactionId: transaction_uuid,
-            discountApplied: discountAppliedFlag,
+            discountApplied: discountApplied,
         });
         await newOrder.save();
 
@@ -89,6 +79,9 @@ export const initiateEsewaPayment = async (req, res) => {
         res.json({ ...esewaData, esewaUrl: ESEWA_URL });
 
     } catch (error) {
+        if (error.statusCode) {
+            return res.status(error.statusCode).json({ message: error.message });
+        }
         console.error('Error in initiateEsewaPayment:', error);
         res.status(500).json({ message: 'Server Error while initiating payment' });
     }

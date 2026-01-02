@@ -5,13 +5,11 @@ import Product from '../models/Product.js';
 import User from '../models/User.js';
 
 
+import { calculateOrderDetails } from '../utils/orderHelper.js';
+
 export const createOrder = async (req, res) => {
   const { items, address, phone, applyDiscount } = req.body;
-  const deliveryFee = 50;
 
-  if (!items || items.length === 0) {
-    return res.status(400).json({ success: false, message: "Your cart is empty." });
-  }
   if (!address || address.trim() === '') {
     return res.status(400).json({ success: false, message: "A delivery location is required." });
   }
@@ -25,44 +23,16 @@ export const createOrder = async (req, res) => {
       return res.status(404).json({ success: false, message: "User not found." });
     }
 
-    let itemsTotal = 0;
-    const orderItems = [];
-    const productUpdates = [];
+    const {
+      orderItems,
+      finalAmount,
+      discountApplied,
+      pointsToDeduct,
+      productUpdates
+    } = await calculateOrderDetails(items, user, applyDiscount);
 
-    for (const item of items) {
-      const product = await Product.findById(item.productId);
-      if (!product) {
-        return res.status(404).json({ success: false, message: `Product not found.` });
-      }
-      if (product.stock < item.quantity) {
-        return res.status(400).json({ success: false, message: `Not enough stock for ${product.name}.` });
-      }
-
-      itemsTotal += product.price * item.quantity;
-
-      orderItems.push({
-        product: product._id,
-        name: product.name,
-        price: product.price,
-        quantity: item.quantity,
-        imageUrl: product.imageUrl,
-      });
-
-      productUpdates.push({
-        updateOne: {
-          filter: { _id: product._id },
-          update: { $inc: { stock: -item.quantity } },
-        },
-      });
-    }
-
-    let finalAmount = itemsTotal + deliveryFee;
-    let discountAppliedFlag = false;
-
-    if (applyDiscount && user.groceryPoints >= 150) {
-      finalAmount -= itemsTotal * 0.25;
-      user.groceryPoints -= 150;
-      discountAppliedFlag = true;
+    if (pointsToDeduct > 0) {
+      user.groceryPoints -= pointsToDeduct;
     }
 
     const newOrder = new Order({
@@ -72,7 +42,7 @@ export const createOrder = async (req, res) => {
       address,
       phone,
       paymentMethod: 'COD',
-      discountApplied: discountAppliedFlag,
+      discountApplied,
       pointsAwarded: 0,
     });
 
@@ -81,7 +51,7 @@ export const createOrder = async (req, res) => {
     await Product.bulkWrite(productUpdates);
 
     let successMessage = `Order placed successfully!`;
-    if (discountAppliedFlag) {
+    if (discountApplied) {
       successMessage += ' 25% discount was applied.';
     }
 
@@ -92,6 +62,9 @@ export const createOrder = async (req, res) => {
       updatedUser: user,
     });
   } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
     console.error("Order creation failed:", error);
     res.status(500).json({ success: false, message: "An unexpected error occurred." });
   }
