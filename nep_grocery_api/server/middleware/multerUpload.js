@@ -5,15 +5,15 @@ import fs from 'fs';
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        
+
         const dir = 'public/images/profile-pictures';
-        if (!fs.existsSync(dir)){
+        if (!fs.existsSync(dir)) {
             fs.mkdirSync(dir, { recursive: true });
         }
         cb(null, dir);
     },
     filename: (req, file, cb) => {
-        
+
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
         const fileExtension = path.extname(file.originalname);
         cb(null, file.fieldname + '-' + uniqueSuffix + fileExtension);
@@ -22,17 +22,36 @@ const storage = multer.diskStorage({
 
 
 const fileFilter = (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-        cb(null, true);
+    // 1. Prevent Null Byte Injection
+    if (file.originalname.indexOf('\0') !== -1) {
+        return cb(new Error('Malicious filename detected'), false);
+    }
+
+    // 2. Allowed Extensions & Mime Types
+    const allowedFileTypes = /jpeg|jpg|png/;
+    const allowedMimeTypes = /image\/(jpeg|png|jpg)/;
+
+    const extname = allowedFileTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedMimeTypes.test(file.mimetype);
+
+    // 3. Double Extension Prevention (e.g., image.php.png)
+    // Reject if the filename contains executable extensions before the final extension
+    const doubleExtensionRegex = /\.(php|exe|sh|bat|js|html|py)\./i;
+    if (doubleExtensionRegex.test(file.originalname)) {
+        return cb(new Error('Double extension file upload attempt detected'), false);
+    }
+
+    if (mimetype && extname) {
+        return cb(null, true);
     } else {
-        cb(new Error('Only image files are allowed!'), false);
+        cb(new Error('Only .jpeg, .jpg and .png format allowed!'), false);
     }
 };
 
 const multerUpload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024 
+        fileSize: 5 * 1024 * 1024
     },
     fileFilter: fileFilter
 });
