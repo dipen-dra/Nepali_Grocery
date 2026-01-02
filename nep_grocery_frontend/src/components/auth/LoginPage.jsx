@@ -27,7 +27,7 @@ const LoginPage = () => {
             toast.error('Please complete the CAPTCHA.');
             return;
         }
-        loginUser(formData);
+        loginUser({ ...formData, captchaToken });
     };
 
     const togglePasswordVisibility = () => {

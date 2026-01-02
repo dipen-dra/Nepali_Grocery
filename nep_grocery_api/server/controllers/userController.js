@@ -303,12 +303,26 @@ export const registerUser = async (req, res) => {
     }
 };
 
+import fetch from 'node-fetch';
+
 // Login
 export const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, captchaToken } = req.body;
         if (!email || !password) {
             return res.status(400).json({ success: false, message: "Email and password are required." });
+        }
+
+        if (!captchaToken) {
+            return res.status(400).json({ success: false, message: "Captcha token is missing." });
+        }
+
+        const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${captchaToken}`;
+        const captchaResponse = await fetch(verificationUrl, { method: 'POST' });
+        const captchaData = await captchaResponse.json();
+
+        if (!captchaData.success) {
+            return res.status(400).json({ success: false, message: "Captcha verification failed. Please try again." });
         }
         const user = await User.findOne({ email });
         if (!user) {
