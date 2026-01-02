@@ -24,7 +24,17 @@ const adminApi = axios.create({
     headers: { 'Content-Type': 'application/json' }
 });
 
-// Removed interceptor as we now use HttpOnly cookies
+// Add request interceptor to attach token from localStorage (Fallback for Cookies)
+adminApi.interceptors.request.use(
+    (config) => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
 
 
 
