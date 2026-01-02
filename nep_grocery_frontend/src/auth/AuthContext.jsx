@@ -30,13 +30,18 @@ const AuthContextProvider = ({ children }) => {
     const login = (data) => {
         if (data && data.data) {
             const userData = data.data;
-            // No longer storing in localStorage
+
+            // Store token in localStorage for header-based auth (fallback for cookies)
+            if (data.token) {
+                localStorage.setItem('token', data.token);
+            }
+
             setUser(userData);
 
             if (userData.role === 'admin') {
                 navigate('/admin/dashboard', { replace: true });
             } else {
-                navigate('/dashboard', { replace: true });
+                navigate('/dashboard/shop', { replace: true });
             }
 
         } else {
@@ -47,11 +52,13 @@ const AuthContextProvider = ({ children }) => {
     const logout = async () => {
         try {
             await api.post('/auth/logout');
+            localStorage.removeItem('token'); // Clear token
             setUser(null);
             navigate("/", { replace: true });
         } catch (error) {
             console.error("Logout failed", error);
             // Force logout on error
+            localStorage.removeItem('token'); // Clear token
             setUser(null);
             navigate("/", { replace: true });
         }

@@ -27,6 +27,7 @@ const corsOptions = {
   origin: [
     "http://localhost:5173",
     "http://192.168.1.110:5173",
+    "http://192.168.206.1:5173",
     process.env.CLIENT_URL
   ].filter(Boolean),
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",

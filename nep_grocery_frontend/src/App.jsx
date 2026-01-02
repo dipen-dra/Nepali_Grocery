@@ -23,9 +23,9 @@ export default function App() {
       <Route path="/" element={<MainLayout><HomePage /></MainLayout>} />
 
       {/* --- AUTH ROUTES --- */}
-      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} replace />} />
-      <Route path="/register" element={!user ? <SignupPage /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} replace />} />
-      <Route path="/forgot-password" element={!user ? <ForgotPasswordPage /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} replace />} />
+      <Route path="/login" element={!user ? <LoginPage /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard/shop"} replace />} />
+      <Route path="/register" element={!user ? <SignupPage /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard/shop"} replace />} />
+      <Route path="/forgot-password" element={!user ? <ForgotPasswordPage /> : <Navigate to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard/shop"} replace />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
       {/* --- PROTECTED ROUTES --- */}

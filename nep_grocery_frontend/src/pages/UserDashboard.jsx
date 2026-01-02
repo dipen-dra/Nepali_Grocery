@@ -173,6 +173,7 @@ const UserDashboard = () => {
 
                 <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-4 sm:p-6 md:p-8">
                     <Routes>
+                        <Route index element={<Navigate to="shop" replace />} />
                         <Route path="shop" element={<ProductsPage selectedCategory={selectedCategory} />} />
                         <Route path="profile" element={<ProfilePage />} />
                         <Route path="orders" element={<MyOrdersPage />} />

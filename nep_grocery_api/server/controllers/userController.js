@@ -324,7 +324,7 @@ export const loginUser = async (req, res) => {
         res.cookie('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict',
+            sameSite: 'lax',
             maxAge: 24 * 60 * 60 * 1000 // 1 day
         });
 
@@ -332,6 +332,7 @@ export const loginUser = async (req, res) => {
             success: true,
             message: "Login successful",
             role: user.role, // Return role for frontend redirect logic
+            token, // Return token for header-based auth
             data: createUserData(user),
         });
     } catch (error) {
@@ -346,7 +347,7 @@ export const logoutUser = async (req, res) => {
         res.clearCookie('token', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
-            sameSite: 'strict'
+            sameSite: 'lax'
         });
         res.status(200).json({ success: true, message: "Logged out successfully" });
     } catch (error) {
@@ -478,6 +479,14 @@ export const updateUserProfile = async (req, res) => {
         const user = await User.findById(req.user._id);
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // Check if email is being updated and if it's already taken
+        if (email && email !== user.email) {
+            const existingUser = await User.findOne({ email });
+            if (existingUser) {
+                return res.status(400).json({ success: false, message: "Email is already in use by another account." });
+            }
         }
 
         user.fullName = fullName || user.fullName;
