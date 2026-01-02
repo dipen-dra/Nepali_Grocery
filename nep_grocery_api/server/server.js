@@ -36,11 +36,13 @@ const corsOptions = {
 };
 
 // Rate Limiting Configuration
+// We allow 1000 requests per 15-minute window per IP address.
+// This is set higher for development purposes; consider lowering for production.
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Increased limit for development
-  standardHeaders: true,
-  legacyHeaders: false,
+  max: 1000,
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   message: 'Too many requests from this IP, please try again after 15 minutes',
 });
 
