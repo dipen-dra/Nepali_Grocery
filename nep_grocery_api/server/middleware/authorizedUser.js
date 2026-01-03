@@ -7,6 +7,7 @@ export const authenticateUser = async (req, res, next) => {
 
     let token = null;
 
+    // Check for token in cookies (preferred for browser) or Authorization header (fallback for API clients)
     if (req.cookies && req.cookies.token) {
         token = req.cookies.token;
     } else if (authHeader && authHeader.startsWith("Bearer ")) {
