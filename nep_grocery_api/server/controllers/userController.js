@@ -395,7 +395,7 @@ export const loginUser = async (req, res) => {
                 return res.status(500).json({ success: false, message: "Failed to send verification code." });
             }
 
-            // Mask email for privacy in response
+            // Mask email for privacy in response (e.g., d***@gmail.com)
             const maskedEmail = user.email.replace(/^(...)(.*)(@.*)$/, "$1***$3");
 
             return res.status(200).json({
@@ -405,7 +405,7 @@ export const loginUser = async (req, res) => {
                 message: `Verification code sent to ${maskedEmail}`
             });
         }
-        // --- END 2FA ---
+        // --- END 2FA LOGIC (Blocks login until OTP is verified) ---
 
         const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET, { expiresIn: "1d" });
 
