@@ -39,8 +39,10 @@ const AuthContextProvider = ({ children }) => {
             setUser(userData);
 
             if (userData.role === 'admin') {
+                // Admins go to their specific dashboard
                 navigate('/admin/dashboard', { replace: true });
             } else {
+                // Standard users default to the shop dashboard
                 navigate('/dashboard/shop', { replace: true });
             }
 
