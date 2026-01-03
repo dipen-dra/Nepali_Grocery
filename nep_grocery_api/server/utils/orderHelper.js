@@ -1,5 +1,12 @@
 import Product from '../models/Product.js';
 
+/**
+ * Calculates order totals, validates stock, and applies discounts.
+ * @param {Array} items - List of items with productId and quantity.
+ * @param {Object} user - The user object to check for points/discount eligibility.
+ * @param {boolean} applyDiscount - Whether the user requested to apply points for a discount.
+ * @returns {Promise<Object>} Object containing calculated totals, order items, and updates.
+ */
 export const calculateOrderDetails = async (items, user, applyDiscount) => {
     if (!items || !Array.isArray(items) || items.length === 0) {
         const error = new Error("Order must contain at least one item.");
