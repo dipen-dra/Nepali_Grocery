@@ -66,7 +66,7 @@ const AdminProfilePage = () => {
     const queryClient = useQueryClient();
 
     const [isEditMode, setIsEditMode] = useState(false);
-    const [formData, setFormData] = useState({ fullName: '', email: '', location: '' });
+    const [formData, setFormData] = useState({ fullName: '', email: '', location: '', twoFactorEnabled: false });
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
     const resetFormData = useCallback(() => {
@@ -74,7 +74,8 @@ const AdminProfilePage = () => {
             setFormData({
                 fullName: user.fullName || '',
                 email: user.email || '',
-                location: user.location || ''
+                location: user.location || '',
+                twoFactorEnabled: user.twoFactorEnabled || false
             });
         }
     }, [user]);
@@ -209,6 +210,21 @@ const AdminProfilePage = () => {
                                                 </button>
                                             </div>
                                         </div>
+
+                                        {/* 2FA Toggle */}
+                                        <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-300 rounded-lg">
+                                            <input
+                                                id="twoFactorEnabled"
+                                                name="twoFactorEnabled"
+                                                type="checkbox"
+                                                checked={formData.twoFactorEnabled}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, twoFactorEnabled: e.target.checked }))}
+                                                className="w-5 h-5 text-green-600 rounded focus:ring-green-500 border-gray-300"
+                                            />
+                                            <label htmlFor="twoFactorEnabled" className="text-sm font-medium text-gray-700 cursor-pointer">
+                                                Enable Two-Factor Authentication (2FA)
+                                            </label>
+                                        </div>
                                     </>
                                 ) : (
                                     <>
@@ -216,6 +232,19 @@ const AdminProfilePage = () => {
                                         <ProfileInfoField icon={Mail} label="Email Address" value={user.email} />
                                         <ProfileInfoField icon={MapPin} label="Location" value={user.location} isPlaceholder={!user.location} />
                                         <ProfileInfoField icon={KeyRound} label="Role" value={user.role} />
+                                        <div className="col-span-1 md:col-span-2 mt-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-3 h-3 rounded-full ${user.twoFactorEnabled ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                                <span className="font-medium text-gray-700">
+                                                    Two-Factor Authentication is <span className={user.twoFactorEnabled ? 'text-green-700 font-bold' : 'text-red-700 font-bold'}>{user.twoFactorEnabled ? 'ENABLED' : 'DISABLED'}</span>
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-gray-500 mt-1 ml-6">
+                                                {user.twoFactorEnabled
+                                                    ? "Your account is secured. You will be asked for an OTP when logging in."
+                                                    : "Enable 2FA to add an extra layer of security to your admin account."}
+                                            </p>
+                                        </div>
                                     </>
                                 )}
                             </div>
