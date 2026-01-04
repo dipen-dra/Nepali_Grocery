@@ -8,8 +8,11 @@ import {
 
 const router = express.Router();
 
+// Apply middleware to ALL routes in this router
+router.use(authenticateUser, isAdmin);
+
 router.post("/create", createUser);
-router.get("/", authenticateUser, isAdmin, getUsers);
+router.get("/", getUsers);
 router.get("/:id", getOneUser);
 router.put("/:id", updateOneUser);
 router.delete("/:id", deleteOneUser);

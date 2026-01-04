@@ -26,7 +26,7 @@ const app = express();
 const corsOptions = {
   origin: [
     "http://localhost:5173",
-    "http://10.1.29.90:5173",
+    "http://192.168.1.110:5173",
     "http://192.168.206.1:5173",
     "http://192.168.196.1:5173",
     process.env.CLIENT_URL
@@ -92,7 +92,7 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 8081;
 const server = app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT} and http://10.1.29.90:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT} and http://192.168.1.110:${PORT}`);
 });
 
 

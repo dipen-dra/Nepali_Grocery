@@ -26,7 +26,7 @@ export default defineConfig({
       // Proxy requests that start with '/api'
       '/api': {
         // Forward them to your backend server
-        target: 'http://10.1.29.90:8081',
+        target: 'http://192.168.1.110:8081',
         // Necessary for virtual hosted sites
         changeOrigin: true,
       },

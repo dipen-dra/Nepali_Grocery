@@ -1,5 +1,6 @@
 import User from "../../models/User.js";
 import bcrypt from "bcrypt";
+import { logAdminAction } from "../../middleware/auditLogger.js";
 
 // Create
 export const createUser = async (req, res) => {
@@ -30,6 +31,10 @@ export const createUser = async (req, res) => {
         });
 
         await newUser.save();
+
+        // --- AUDIT LOG ---
+        await logAdminAction(req, "Created User", 201, { targetUserEmail: email });
+
         return res.status(201).json({
             success: true,
             message: "User registered"
@@ -130,6 +135,9 @@ export const updateOneUser = async (req, res) => {
 
         await User.updateOne({ _id: _id }, { $set: updateFields });
 
+        // --- AUDIT LOG ---
+        await logAdminAction(req, "Updated User", 200, { targetUserId: _id, updates: updateFields });
+
         return res.status(200).json({
             success: true,
             message: "User data updated"
@@ -156,6 +164,9 @@ export const deleteOneUser = async (req, res) => {
                 message: "User not found"
             });
         }
+
+        // --- AUDIT LOG ---
+        await logAdminAction(req, "Deleted User", 200, { targetUserId: _id });
 
         return res.status(200).json({
             success: true,
