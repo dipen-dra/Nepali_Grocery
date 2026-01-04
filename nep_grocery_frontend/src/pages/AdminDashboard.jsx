@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
-import { Plus, Edit, Trash2, Search, Users, DollarSign, LogOut, Menu, X, AlertTriangle, ShoppingCart, Package, ClipboardList, Tag, Home as HomeIcon, Mail, PhoneCallIcon, User as UserIcon, MessageSquare } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Users, DollarSign, LogOut, Menu, X, AlertTriangle, ShoppingCart, Package, ClipboardList, Tag, Home as HomeIcon, Mail, PhoneCallIcon, User as UserIcon, MessageSquare, CheckCircle } from 'lucide-react';
 import { ToastContainer, toast } from 'react-toastify';
 import axios from 'axios';
 import 'react-toastify/dist/ReactToastify.css';
@@ -78,9 +78,109 @@ const fetchOrderById = async (orderId) => {
 
 const updateOrderStatus = ({ orderId, status }) => adminApi.put(`/orders/${orderId}`, { status });
 
-const fetchUsers = async () => {
-    const { data } = await adminApi.get('/admin/users');
-    return data.data;
+const updateUserStatus = ({ userId, isActive }) => adminApi.put(`/admin/users/${userId}/status`, { isActive });
+
+const UsersPage = () => {
+    const queryClient = useQueryClient();
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isConfirmOpen, setConfirmOpen] = useState(false);
+    const [userToToggle, setUserToToggle] = useState(null);
+
+    const { data: users, isLoading, isError, error } = useQuery({ queryKey: ['users'], queryFn: fetchUsers });
+
+    // Mutation for toggling status
+    const statusMutation = useMutation({
+        mutationFn: updateUserStatus,
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['users'] });
+            toast.success(data.data?.message || "User status updated successfully.");
+        },
+        onError: (err) => {
+            toast.error(err.response?.data?.message || "Failed to update status.");
+        },
+        onSettled: () => {
+            setConfirmOpen(false);
+            setUserToToggle(null);
+        }
+    });
+
+    const handleToggleClick = (user) => {
+        setUserToToggle(user);
+        setConfirmOpen(true);
+    };
+
+    const confirmToggle = () => {
+        if (userToToggle) {
+            statusMutation.mutate({ userId: userToToggle._id, isActive: !userToToggle.isActive });
+        }
+    };
+
+    if (isLoading) return <LoadingSpinner />;
+    if (isError) return <ErrorMessage message={error.message} />;
+
+    const filteredUsers = Array.isArray(users) ? users.filter(user =>
+        (user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
+    ) : [];
+
+    return (
+        <div className="space-y-6">
+            <h1 className="text-3xl font-bold text-gray-800">Customer Management</h1>
+            <Card>
+                <div className="relative w-full md:w-1/3 mb-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} /><input type="text" placeholder="Search by name or email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="text-sm text-gray-500 uppercase bg-gray-50">
+                            <tr>
+                                <th className="p-3">Name</th>
+                                <th className="p-3">Email</th>
+                                <th className="p-3">Joined On</th>
+                                <th className="p-3 text-center">Status</th>
+                                <th className="p-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredUsers.length > 0 ? (
+                                filteredUsers.map(user => (
+                                    <tr key={user._id} className="border-b border-gray-200 hover:bg-gray-50">
+                                        <td className="p-3 font-medium text-gray-900">{user.fullName}</td>
+                                        <td className="p-3 text-gray-600">{user.email}</td>
+                                        <td className="p-3 text-gray-600">{new Date(user.createdAt).toLocaleDateString()}</td>
+                                        <td className="p-3 text-center">
+                                            <span className={`px-2 py-1 rounded-full text-xs font-semibold ${user.isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                                {user.isActive ? 'Active' : 'Banned'}
+                                            </span>
+                                        </td>
+                                        <td className="p-3 text-center">
+                                            <button
+                                                onClick={() => handleToggleClick(user)}
+                                                className={`p-2 rounded-full transition-colors ${user.isActive ? 'text-red-500 hover:bg-red-50' : 'text-green-500 hover:bg-green-50'}`}
+                                                title={user.isActive ? "Deactivate User" : "Activate User"}
+                                            >
+                                                {user.isActive ? <Trash2 size={18} /> : <CheckCircle size={18} />}
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr><td colSpan="5" className="text-center p-8 text-gray-500">{searchTerm ? "No customers match your search." : "No customers found."}</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setConfirmOpen(false)}
+                onConfirm={confirmToggle}
+                title={userToToggle?.isActive ? "Deactivate User" : "Reactivate User"}
+                message={`Are you sure you want to ${userToToggle?.isActive ? 'ban' : 'unban'} ${userToToggle?.fullName}? ${userToToggle?.isActive ? 'They will lose access immediately.' : 'They will regain access to their account.'}`}
+                confirmText={userToToggle?.isActive ? "Deactivate" : "Activate"}
+                confirmVariant={userToToggle?.isActive ? "danger" : "primary"}
+            />
+        </div>
+    );
 };
 
 const PIE_COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AF19FF'];
@@ -496,38 +596,7 @@ const CategoriesPage = () => {
     );
 };
 
-const UsersPage = () => {
-    const [searchTerm, setSearchTerm] = useState('');
-    const { data: users, isLoading, isError, error } = useQuery({ queryKey: ['users'], queryFn: fetchUsers });
 
-    if (isLoading) return <LoadingSpinner />;
-    if (isError) return <ErrorMessage message={error.message} />;
-
-    const filteredUsers = Array.isArray(users) ? users.filter(user =>
-        (user.fullName && user.fullName.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()))
-    ) : [];
-
-    return (
-        <div className="space-y-6">
-            <h1 className="text-3xl font-bold text-gray-800">Customer Management</h1>
-            <Card>
-                <div className="relative w-full md:w-1/3 mb-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} /><input type="text" placeholder="Search by name or email..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left"><thead className="text-sm text-gray-500 uppercase bg-gray-50"><tr><th className="p-3">Name</th><th className="p-3">Email</th><th className="p-3">Joined On</th></tr></thead>
-                        <tbody>
-                            {filteredUsers.length > 0 ? (
-                                filteredUsers.map(user => (<tr key={user._id} className="border-b border-gray-200 hover:bg-gray-50"><td className="p-3 font-medium text-gray-900">{user.fullName}</td><td className="p-3 text-gray-600">{user.email}</td><td className="p-3 text-gray-600">{new Date(user.createdAt).toLocaleDateString()}</td></tr>))
-                            ) : (
-                                <tr><td colSpan="3" className="text-center p-8 text-gray-500">{searchTerm ? "No customers match your search." : "No customers found."}</td></tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
-        </div>
-    );
-};
 
 
 const ProductFormModal = ({ isOpen, onClose, onSave, product, categories }) => {

@@ -34,6 +34,13 @@ const UserSchema = new Schema(
       type: Number,
       default: 0,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    securityPin: {
+      type: String, // Will be hashed
+    },
     // --- 2FA FIELDS ---
     twoFactorEnabled: {
       type: Boolean,

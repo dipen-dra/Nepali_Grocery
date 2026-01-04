@@ -173,11 +173,43 @@ export const deleteOneUser = async (req, res) => {
             message: "User deleted"
         });
 
-    } catch (err) {
-        console.error("Delete user error:", err);
-        return res.status(500).json({
-            success: false,
-            message: "Server error"
-        });
+    } catch (error) {
+        console.error("Delete user error:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
+// Toggle User Active Status (Ban/Unban)
+export const updateUserStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isActive } = req.body; // Expect boolean
+
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found" });
+        }
+
+        // Prevent admin from banning themselves
+        if (req.user && user._id.toString() === req.user._id.toString()) {
+            return res.status(400).json({ success: false, message: "You cannot deactivate your own account." });
+        }
+
+        user.isActive = isActive;
+        await user.save();
+
+        // Log the action
+        await logAdminAction(
+            req,
+            isActive ? 'UNBAN_USER' : 'BAN_USER',
+            200,
+            { targetUserId: user._id, targetUserEmail: user.email, status: isActive ? 'activated' : 'deactivated' }
+        );
+
+        res.status(200).json({ success: true, message: `User ${isActive ? 'activated' : 'deactivated'} successfully.` });
+
+    } catch (error) {
+        console.error("Update status error:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
     }
 };

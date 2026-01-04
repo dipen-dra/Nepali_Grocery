@@ -265,7 +265,58 @@ const createUserData = (user) => ({
     location: user.location,
     groceryPoints: user.groceryPoints,
     twoFactorEnabled: user.twoFactorEnabled, // Added for frontend toggle state
+    isPinSet: !!user.securityPin, // Boolean flag for frontend
 });
+
+// Set Security PIN
+export const setUserPin = async (req, res) => {
+    try {
+        const { pin } = req.body;
+        const userId = req.user._id;
+
+        if (!pin || pin.length !== 6 || isNaN(pin)) {
+            return res.status(400).json({ success: false, message: "PIN must be a 6-digit number." });
+        }
+
+        const user = await User.findById(userId);
+        if (user.securityPin) {
+            return res.status(400).json({ success: false, message: "PIN already set. Please contact support to reset." });
+        }
+
+        const hashedPin = await bcrypt.hash(pin, 10);
+        user.securityPin = hashedPin;
+        await user.save();
+
+        res.status(200).json({ success: true, message: "Security PIN set successfully." });
+    } catch (error) {
+        console.error("Set PIN Error:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
+// Verify Security PIN (Middleware or Endpoint)
+export const verifyUserPin = async (req, res) => {
+    try {
+        const { pin } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user.securityPin) {
+            return res.status(400).json({ success: false, message: "No PIN set for this account." });
+        }
+
+        const isMatch = await bcrypt.compare(pin, user.securityPin);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: "Incorrect PIN." });
+        }
+
+        // Return a temporary "PIN Verified" token or simple success
+        res.status(200).json({ success: true, message: "PIN Verified" });
+    } catch (error) {
+        console.error("Verify PIN Error:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
 
 const sendOtpEmail = async (email, otp) => {
     const transporter = nodemailer.createTransport({

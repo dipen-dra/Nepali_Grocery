@@ -1,5 +1,9 @@
 import express from 'express';
-import { registerUser, loginUser, googleLogin, logoutUser, getUserProfile, updateUserProfilePicture, updateUserProfile, sendResetLink, resetPassword, verifyOtp, resendOtp } from '../controllers/userController.js';
+import {
+    registerUser, loginUser, googleLogin, logoutUser, getUserProfile,
+    updateUserProfilePicture, updateUserProfile, sendResetLink,
+    resetPassword, verifyOtp, resendOtp, setUserPin, verifyUserPin
+} from '../controllers/userController.js';
 import { authenticateUser } from '../middleware/authorizedUser.js';
 import multerUpload from '../middleware/multerUpload.js';
 
@@ -37,5 +41,9 @@ router.post(
     "/reset-password/:token",
     resetPassword
 );
+
+// PIN Management
+router.post('/set-pin', authenticateUser, setUserPin);
+router.post('/verify-pin', authenticateUser, verifyUserPin);
 
 export default router;
