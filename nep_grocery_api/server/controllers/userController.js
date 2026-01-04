@@ -709,3 +709,75 @@ export const updateUserProfilePicture = async (req, res) => {
         res.status(500).json({ success: false, message: "Server error during file update." });
     }
 };
+
+import { OAuth2Client } from 'google-auth-library';
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Google Login
+export const googleLogin = async (req, res) => {
+    const { token } = req.body;
+    if (!token) {
+        return res.status(400).json({ success: false, message: "Google token is required." });
+    }
+
+    try {
+        // Verify the token with Google
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID
+        });
+        const payload = ticket.getPayload();
+
+        // Security Check 1: Verified Email
+        if (!payload.email_verified) {
+            return res.status(403).json({ success: false, message: "Your Google email is not verified." });
+        }
+
+        const email = payload.email;
+        const fullName = payload.name;
+        const picture = payload.picture;
+
+        let user = await User.findOne({ email });
+
+        if (user) {
+            // Security Check 2: Merging Logic
+            // If user exists, we log them in. 
+            // We assume Google's verification of ownership is sufficient proof.
+        } else {
+            // Security Check 3: Role Escalation Prevention
+            // Create new user with FORCE role 'normal'
+            user = new User({
+                email,
+                fullName,
+                password: await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10), // Random password
+                role: 'normal',
+                profilePicture: picture,
+                groceryPoints: 0,
+                isGoogleAuth: true // Optional flag for future use
+            });
+            await user.save();
+        }
+
+        // Issue JWT similar to standard login
+        const jwtToken = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET, { expiresIn: "7d" });
+
+        res.cookie('token', jwtToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        res.status(200).json({
+            success: true,
+            message: "Google Login successful",
+            role: user.role,
+            token: jwtToken,
+            data: createUserData(user),
+        });
+
+    } catch (error) {
+        console.error("Google Login Error:", error);
+        res.status(500).json({ success: false, message: "Google authentication failed." });
+    }
+};

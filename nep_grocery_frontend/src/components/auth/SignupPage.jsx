@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
+import { AuthContext } from '../../auth/AuthContext';
+import api from '../../api/api';
+import { GoogleLogin } from '@react-oauth/google';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Lottie from "lottie-react";
@@ -11,6 +14,7 @@ import ReCAPTCHA from "react-google-recaptcha";
 
 const SignupPage = () => {
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
   const [formData, setFormData] = useState({ fullName: '', email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -204,6 +208,34 @@ const SignupPage = () => {
                   {isSubmitting ? 'Creating Account...' : 'Create Account'}
                 </button>
               </form>
+
+              <div className="mt-6">
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-2 bg-white text-gray-500">Or sign up with</span>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-center">
+                  <GoogleLogin
+                    onSuccess={async (credentialResponse) => {
+                      try {
+                        const { data } = await api.post('/auth/google-login', { token: credentialResponse.credential });
+                        login(data); // This handles navigation
+                        toast.success('Google Login successful!');
+                      } catch (error) {
+                        toast.error(error.response?.data?.message || 'Google Login failed.');
+                      }
+                    }}
+                    onError={() => {
+                      toast.error('Google Signup Failed');
+                    }}
+                  />
+                </div>
+              </div>
 
               <p className="text-center text-sm text-gray-500 mt-8">
                 Already have an account?{' '}

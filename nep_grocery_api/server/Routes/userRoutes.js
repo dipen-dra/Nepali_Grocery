@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, loginUser, logoutUser, getUserProfile, updateUserProfilePicture, updateUserProfile, sendResetLink, resetPassword, verifyOtp, resendOtp } from '../controllers/userController.js';
+import { registerUser, loginUser, googleLogin, logoutUser, getUserProfile, updateUserProfilePicture, updateUserProfile, sendResetLink, resetPassword, verifyOtp, resendOtp } from '../controllers/userController.js';
 import { authenticateUser } from '../middleware/authorizedUser.js';
 import multerUpload from '../middleware/multerUpload.js';
 
@@ -12,6 +12,7 @@ import { otpVerifyLimiter, otpRequestLimiter } from '../middleware/otpLimiter.js
 // --- PUBLIC ROUTES ---
 router.post('/register', registerLimiter, registerUser);
 router.post('/login', loginLimiter, loginUser);
+router.post('/google-login', loginLimiter, googleLogin); // Using login limiter for this too
 router.post('/logout', logoutUser);
 
 // --- 2FA ROUTES ---

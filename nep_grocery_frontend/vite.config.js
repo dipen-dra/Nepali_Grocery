@@ -19,6 +19,9 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  define: {
+    'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify('381818830866-smf0ps7geage5ib54sdavnookdqnlgcq.apps.googleusercontent.com'),
+  },
   // Add this 'server' block
   server: {
     host: true, // Listen on all local IPs

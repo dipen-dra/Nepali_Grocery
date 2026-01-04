@@ -1,4 +1,5 @@
 import { useState, useContext } from 'react';
+import { GoogleLogin } from '@react-oauth/google';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Lottie from "lottie-react";
@@ -248,6 +249,36 @@ const LoginPage = () => {
                                         >
                                             {isLoading ? 'Checking Security...' : 'Login'}
                                         </button>
+                                        <div className="mt-6">
+                                            <div className="relative">
+                                                <div className="absolute inset-0 flex items-center">
+                                                    <div className="w-full border-t border-gray-300"></div>
+                                                </div>
+                                                <div className="relative flex justify-center text-sm">
+                                                    <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-6 flex justify-center">
+                                                <GoogleLogin
+                                                    onSuccess={async (credentialResponse) => {
+                                                        setIsLoading(true);
+                                                        try {
+                                                            const { data } = await api.post('/auth/google-login', { token: credentialResponse.credential });
+                                                            login(data);
+                                                            toast.success('Google Login successful!');
+                                                            setIsLoading(false);
+                                                        } catch (error) {
+                                                            setIsLoading(false);
+                                                            toast.error(error.response?.data?.message || 'Google Login failed.');
+                                                        }
+                                                    }}
+                                                    onError={() => {
+                                                        toast.error('Google Login Failed');
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
                                     </form>
                                     <p className="text-center text-sm text-gray-500 mt-8">
                                         Don't have an account?{' '}
