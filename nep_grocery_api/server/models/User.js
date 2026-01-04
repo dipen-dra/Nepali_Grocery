@@ -52,6 +52,12 @@ const UserSchema = new Schema(
     otpExpires: {
       type: Date,
     },
+    // --- SECURITY LOGS ---
+    loginHistory: [{
+      ip: String,
+      coordinates: { lat: Number, lon: Number }, // from geoip-lite
+      timestamp: { type: Date, default: Date.now }
+    }],
   },
   { timestamps: true }
 );

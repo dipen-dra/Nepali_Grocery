@@ -414,10 +414,29 @@ export const registerUser = async (req, res) => {
 
 import fetch from 'node-fetch';
 
+import geoip from 'geoip-lite';
+
+// Helper: Calculate Haversine Ref: https://www.movable-type.co.uk/scripts/latlong.html
+const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+const deg2rad = (deg) => {
+    return deg * (Math.PI / 180);
+}
+
 // Login
 export const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, pin } = req.body; // Added pin param
         if (!email || !password) {
             return res.status(400).json({ success: false, message: "Email and password are required." });
         }
@@ -431,16 +450,16 @@ export const loginUser = async (req, res) => {
             return res.status(401).json({ success: false, message: "Invalid email or password." });
         }
 
-        // --- 2FA LOGIC ---
+        // --- 2FA LOGIC (Existing) ---
         if (user.twoFactorEnabled) {
             const otp = generateSecureOtp();
-            user.otp = otp;
+            user.otp = await bcrypt.hash(otp, 10); // Hash OTP
             user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
             await user.save();
 
             // Send OTP Email
             try {
-                await sendOtpEmail(user.email, otp);
+                await sendOtpEmail(user.email, otp); // Send plain OTP
             } catch (emailError) {
                 console.error("Failed to send OTP email:", emailError);
                 return res.status(500).json({ success: false, message: "Failed to send verification code." });
@@ -457,6 +476,76 @@ export const loginUser = async (req, res) => {
             });
         }
         // --- END 2FA LOGIC (Blocks login until OTP is verified) ---
+
+        // --- COMPONENT 3: SUSPICIOUS ACTIVITY (GEO-VELOCITY) ---
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+        // Mock IP for testing local travel if it's localhost (optional, but good for demo)
+        // const testIp = '1.1.1.1'; // USA
+        // const testIp2 = '202.70.75.1'; // Nepal
+
+        const geo = geoip.lookup(ip); // Returns { ll: [lat, lon], ... }
+
+        let requiresSecurityChallenge = false;
+
+        // Only check if we have history and valid geo data
+        if (user.loginHistory && user.loginHistory.length > 0 && geo && geo.ll) {
+            const lastLogin = user.loginHistory[user.loginHistory.length - 1];
+
+            if (lastLogin.coordinates && lastLogin.coordinates.lat) {
+                const distanceKm = getDistanceFromLatLonInKm(
+                    lastLogin.coordinates.lat, lastLogin.coordinates.lon,
+                    geo.ll[0], geo.ll[1]
+                );
+
+                const timeDiffHours = (Date.now() - new Date(lastLogin.timestamp).getTime()) / (1000 * 60 * 60);
+
+                // Velocity: km / hour
+                // If timeDiff is very small (e.g. 0), velocity is infinite.
+                // Threshold: 800 km/h (approx passenger jet cruise speed)
+                const velocity = timeDiffHours > 0 ? distanceKm / timeDiffHours : (distanceKm > 50 ? 9999 : 0);
+
+                console.log(`[Geo-Velocity] Dist: ${distanceKm.toFixed(2)}km, Time: ${timeDiffHours.toFixed(2)}h, Speed: ${velocity.toFixed(2)}km/h`);
+
+                if (velocity > 800) {
+                    console.warn(`[Suspicious] ${user.email} moved too fast! Triggering Challenge.`);
+                    requiresSecurityChallenge = true;
+                }
+            }
+        }
+
+        // If Challenge Triggered
+        if (requiresSecurityChallenge) {
+            // If user has NO PIN set, we might fallback to email OTP (simplification: just warn or force generic 2FA if existing)
+            // But if they HAVE a PIN, we demand it.
+            if (user.securityPin) {
+                if (!pin) {
+                    return res.status(403).json({
+                        success: false,
+                        requiresPin: true,
+                        message: "Suspicious login detected (traveling too fast). Please enter your Security PIN."
+                    });
+                }
+                // Verify PIN
+                const isPinMatch = await bcrypt.compare(pin, user.securityPin);
+                if (!isPinMatch) {
+                    return res.status(401).json({ success: false, message: "Invalid Security PIN." });
+                }
+                // If PIN matches, we proceed to login!
+            }
+        }
+
+        // --- SUCCESSFUL LOGIN ---
+        // Log this login (if we have geo data)
+        if (geo && geo.ll) {
+            user.loginHistory.push({
+                ip: ip,
+                coordinates: { lat: geo.ll[0], lon: geo.ll[1] },
+                timestamp: new Date()
+            });
+            // Keep history short (last 5)
+            if (user.loginHistory.length > 5) user.loginHistory.shift();
+            await user.save();
+        }
 
         const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET, { expiresIn: "7d" });
 
@@ -636,7 +725,9 @@ export const verifyOtp = async (req, res) => {
             return res.status(400).json({ success: false, message: "OTP has expired. Please login again to get a new code." });
         }
 
-        if (user.otp !== otp) {
+        // --- HASH COMPARISON ---
+        const isMatch = await bcrypt.compare(otp, user.otp);
+        if (!isMatch) {
             return res.status(400).json({ success: false, message: "Invalid OTP. Please try again." });
         }
 
@@ -683,11 +774,11 @@ export const resendOtp = async (req, res) => {
         }
 
         const otp = generateSecureOtp();
-        user.otp = otp;
+        user.otp = await bcrypt.hash(otp, 10); // Hash OTP
         user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
         await user.save();
 
-        await sendOtpEmail(user.email, otp);
+        await sendOtpEmail(user.email, otp); // Send plain OTP
 
         res.status(200).json({
             success: true,
@@ -701,15 +792,29 @@ export const resendOtp = async (req, res) => {
 
 // Update Profile Info
 export const updateUserProfile = async (req, res) => {
-    const { fullName, email, location, twoFactorEnabled } = req.body;
+    const { fullName, email, location, twoFactorEnabled, pin } = req.body; // Added pin
     try {
         const user = await User.findById(req.user._id);
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
+        // --- TAMPER PROTECTION: SENSITIVE ACTIONS REQUIRE PIN ---
+        const isDisabling2FA = twoFactorEnabled === false && user.twoFactorEnabled === true;
+        const isChangingEmail = email && email !== user.email;
+
+        if ((isDisabling2FA || isChangingEmail) && user.securityPin) {
+            if (!pin) {
+                return res.status(403).json({ success: false, message: "Security PIN required to change sensitive settings." });
+            }
+            const isPinMatch = await bcrypt.compare(pin, user.securityPin);
+            if (!isPinMatch) {
+                return res.status(403).json({ success: false, message: "Invalid Security PIN." });
+            }
+        }
+
         // Check if email is being updated and if it's already taken
-        if (email && email !== user.email) {
+        if (isChangingEmail) {
             const existingUser = await User.findOne({ email });
             if (existingUser) {
                 return res.status(400).json({ success: false, message: "Email is already in use by another account." });

@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { Avatar } from '../components/Avatar';
 import { Loader2, Edit, Save, Edit2, User, Mail, ShoppingCart, Wallet, MapPin, Gift, Shield, CheckCircle } from 'lucide-react';
 import PinSetupModal from '../components/auth/PinSetupModal';
+import PinVerifyModal from '../components/auth/PinVerifyModal';
 import axios from 'axios';
 import { MyOrdersPage } from './MyOrderPage.jsx';
 import { PaymentHistoryPage } from './PaymentHistory.jsx';
@@ -87,24 +88,41 @@ const ProfilePage = () => {
         }
     }, [user, updateUser]);
 
+    const [pendingUpdate, setPendingUpdate] = useState(null); // To store the update payload while waiting for PIN
+    const [isPinVerifyOpen, setIsPinVerifyOpen] = useState(false); // To toggle verification modal
+
     const profileUpdateMutation = useMutation({
         mutationFn: updateUserProfile,
         onSuccess: () => {
             toast.success('Profile updated successfully!');
             queryClient.invalidateQueries({ queryKey: ['userProfile'] });
             setIsEditMode(false);
+            setPendingUpdate(null);
         },
-        onError: (error) => toast.error(error.response?.data?.message || 'Failed to update profile.')
+        onError: (error) => {
+            // Check for PIN requirement (Backend sends 403 Forbidden with specific message)
+            if (error.response?.status === 403 && error.response?.data?.message?.includes("Security PIN")) {
+                toast.info("Please verify your Security PIN to continue.");
+                setIsPinVerifyOpen(true);
+            } else {
+                toast.error(error.response?.data?.message || 'Failed to update profile.');
+            }
+        }
     });
 
-    const pictureUpdateMutation = useMutation({
-        mutationFn: updateUserProfilePicture,
-        onSuccess: () => {
-            toast.success('Profile picture updated successfully!');
-            queryClient.invalidateQueries({ queryKey: ['userProfile'] });
-        },
-        onError: (error) => toast.error(error.response?.data?.message || 'Failed to update picture.')
-    });
+    const handlePinVerifySubmit = (pin) => {
+        if (pendingUpdate) {
+            profileUpdateMutation.mutate({ ...pendingUpdate, pin });
+            setIsPinVerifyOpen(false);
+        }
+    };
+
+    const attemptUpdate = (newData) => {
+        setPendingUpdate(newData); // Store it
+        profileUpdateMutation.mutate(newData); // Try normally
+    };
+
+    // ... (pictureUpdateMutation logs remain same) ...
 
     const handleInputChange = (e) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -112,8 +130,10 @@ const ProfilePage = () => {
 
     const handleFormSubmit = (e) => {
         e.preventDefault();
-        profileUpdateMutation.mutate(formData);
+        attemptUpdate(formData);
     };
+
+    // ...
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -123,7 +143,9 @@ const ProfilePage = () => {
         pictureUpdateMutation.mutate(pictureFormData);
     };
 
+    // Fetch Location... (No change needed) 
     const handleFetchLocation = () => {
+        // ... (standard fetch location)
         if (!isEditMode) return;
         setIsFetchingLocation(true);
         toast.info("Fetching your location...");
@@ -262,7 +284,7 @@ const ProfilePage = () => {
                                                         type="checkbox"
                                                         checked={user.twoFactorEnabled || false}
                                                         onChange={() => {
-                                                            profileUpdateMutation.mutate({ twoFactorEnabled: !user.twoFactorEnabled });
+                                                            attemptUpdate({ twoFactorEnabled: !user.twoFactorEnabled });
                                                         }}
                                                         disabled={profileUpdateMutation.isLoading}
                                                         className="sr-only peer"
@@ -311,11 +333,16 @@ const ProfilePage = () => {
                 {activeTab === 'orders' && <MyOrdersPage />}
                 {activeTab === 'payments' && <PaymentHistoryPage />}
             </div>
-            </div>
-            <PinSetupModal 
-                isOpen={isPinModalOpen} 
-                onClose={() => setIsPinModalOpen(false)} 
-                onSuccess={() => queryClient.invalidateQueries({ queryKey: ['userProfile'] })} 
+            <PinSetupModal
+                isOpen={isPinModalOpen}
+                onClose={() => setIsPinModalOpen(false)}
+                onSuccess={() => queryClient.invalidateQueries({ queryKey: ['userProfile'] })}
+            />
+            <PinVerifyModal
+                isOpen={isPinVerifyOpen}
+                onClose={() => setIsPinVerifyOpen(false)}
+                onSubmit={handlePinVerifySubmit}
+                isLoading={profileUpdateMutation.isLoading}
             />
         </div >
     );
