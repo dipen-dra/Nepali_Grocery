@@ -407,14 +407,14 @@ export const loginUser = async (req, res) => {
         }
         // --- END 2FA LOGIC (Blocks login until OTP is verified) ---
 
-        const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET, { expiresIn: "1d" });
+        const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET, { expiresIn: "7d" });
 
         // Set cookie
         res.cookie('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 24 * 60 * 60 * 1000 // 1 day
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
         res.status(200).json({
@@ -595,13 +595,13 @@ export const verifyOtp = async (req, res) => {
         user.otpExpires = undefined;
         await user.save();
 
-        const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET, { expiresIn: "1d" });
+        const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET, { expiresIn: "7d" });
 
         res.cookie('token', token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax',
-            maxAge: 24 * 60 * 60 * 1000 // 1 day
+            maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
         res.status(200).json({
