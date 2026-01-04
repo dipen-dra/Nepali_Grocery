@@ -122,7 +122,17 @@ const ProfilePage = () => {
         profileUpdateMutation.mutate(newData); // Try normally
     };
 
-    // ... (pictureUpdateMutation logs remain same) ...
+    const pictureUpdateMutation = useMutation({
+        mutationFn: updateUserProfilePicture,
+        onSuccess: (data) => {
+            toast.success('Profile picture updated!');
+            queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+            updateUser(data.data);
+        },
+        onError: (error) => {
+            toast.error(error.response?.data?.message || 'Failed to update picture.');
+        }
+    });
 
     const handleInputChange = (e) => {
         setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
