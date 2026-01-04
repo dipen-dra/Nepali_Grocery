@@ -1,10 +1,10 @@
 import axios from 'axios';
 
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.110:8081/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://10.1.29.90:8081/api';
 
 
-export const SERVER_BASE_URL = 'http://192.168.1.110:8081';
+export const SERVER_BASE_URL = 'http://10.1.29.90:8081';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
