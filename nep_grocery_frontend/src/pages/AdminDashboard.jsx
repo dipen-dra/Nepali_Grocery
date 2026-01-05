@@ -80,6 +80,11 @@ const updateOrderStatus = ({ orderId, status }) => adminApi.put(`/orders/${order
 
 const updateUserStatus = ({ userId, isActive }) => adminApi.put(`/admin/users/${userId}/status`, { isActive });
 
+const fetchUsers = async () => {
+    const { data } = await adminApi.get('/admin/users');
+    return data.data || [];
+};
+
 const UsersPage = () => {
     const queryClient = useQueryClient();
     const [searchTerm, setSearchTerm] = useState('');
