@@ -572,7 +572,6 @@ export const loginUser = async (req, res) => {
             success: true,
             message: "Login successful",
             role: user.role, // Return role for frontend redirect logic
-            token, // Return token for header-based auth
             data: createUserData(user),
         });
     } catch (error) {

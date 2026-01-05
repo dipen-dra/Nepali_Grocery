@@ -14,19 +14,7 @@ const api = axios.create({
     }
 });
 
-// Add a request interceptor to attach the token from localStorage
-api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => {
-        return Promise.reject(error);
-    }
-);
+// Request interceptor removed (Using HttpOnly Cookies)
 
 // Add a response interceptor to handle 401 errors
 api.interceptors.response.use(

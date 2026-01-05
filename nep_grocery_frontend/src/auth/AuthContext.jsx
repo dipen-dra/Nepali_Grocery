@@ -31,11 +31,6 @@ const AuthContextProvider = ({ children }) => {
         if (data && data.data) {
             const userData = data.data;
 
-            // Store token in localStorage for header-based auth (fallback for cookies)
-            if (data.token) {
-                localStorage.setItem('token', data.token);
-            }
-
             setUser(userData);
 
             if (userData.role === 'admin') {
