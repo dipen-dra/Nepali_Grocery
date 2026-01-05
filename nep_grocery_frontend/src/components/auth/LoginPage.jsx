@@ -23,6 +23,9 @@ const LoginPage = () => {
     const [maskedEmail, setMaskedEmail] = useState('');
     const [resendTimer, setResendTimer] = useState(0);
 
+    // SECURITY PIN States
+    const [showPinModal, setShowPinModal] = useState(false);
+
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
 
@@ -37,7 +40,7 @@ const LoginPage = () => {
             return;
         }
         setIsLoading(true); // Main page loading
-        setLoginLoading(true); // Button specific loading
+
         try {
             // Initial Attempt (without PIN)
             const res = await api.post('/auth/login', formData);
@@ -49,7 +52,7 @@ const LoginPage = () => {
                 setShowOtpModal(true); // Show OTP modal (if you have one, otherwise relies on requires2FA)
                 toast.info(res.data.message);
                 setIsLoading(false); // Stop main loading, wait for OTP
-                setLoginLoading(false);
+
                 startResendTimer();
                 return;
             }
@@ -58,11 +61,17 @@ const LoginPage = () => {
             login(res.data); // Assuming res.data contains user info and token
             toast.success('Login successful!');
             setIsLoading(false);
-            setLoginLoading(false);
+
             // navigate(res.data.role === 'admin' ? '/admin/dashboard' : '/'); // Example navigation based on role
         } catch (error) {
             setIsLoading(false);
-            setLoginLoading(false);
+
+            if (error.response && error.response.status === 403 && error.response.data.requiresPin) {
+                toast.warning(error.response.data.message);
+                setShowPinModal(true);
+                return;
+            }
+
             const errorMessage = error.response?.data?.message || 'Login failed.';
             const headers = error.response?.headers;
 
@@ -77,6 +86,22 @@ const LoginPage = () => {
             } else {
                 toast.error(errorMessage);
             }
+        }
+    };
+
+    const handlePinSubmit = async (pin) => {
+        setIsLoading(true);
+        try {
+            // Retry login with PIN
+            const res = await api.post('/auth/login', { ...formData, pin });
+
+            login(res.data);
+            toast.success('Identity Verified! Login successful.');
+            setShowPinModal(false);
+            setIsLoading(false);
+        } catch (error) {
+            setIsLoading(false);
+            toast.error(error.response?.data?.message || "Invalid PIN");
         }
     };
 
@@ -203,7 +228,7 @@ const LoginPage = () => {
                                         <p className="text-gray-500 mt-2">Enter your email and password to access your account.</p>
                                     </div>
 
-                                    <form className="space-y-6" onSubmit={handleLoginSubmit}>
+                                    <form className="space-y-6" onSubmit={handleSubmit}>
                                         <div>
                                             <label className="text-sm font-semibold text-gray-700 block mb-2">Email Address</label>
                                             <input
@@ -339,12 +364,7 @@ const LoginPage = () => {
 
                                     <div className="mt-8 text-center">
 
-                                        <PinVerifyModal
-                                            isOpen={showPinModal}
-                                            onClose={() => setShowPinModal(false)}
-                                            onSubmit={handlePinSubmit}
-                                            isLoading={loginLoading}
-                                        />
+
                                         <button
                                             onClick={() => setRequires2FA(false)}
                                             className="text-gray-400 hover:text-gray-600 text-sm"
@@ -358,6 +378,12 @@ const LoginPage = () => {
                     </div>
                 </div>
             </div>
+            <PinVerifyModal
+                isOpen={showPinModal}
+                onClose={() => setShowPinModal(false)}
+                onSubmit={handlePinSubmit}
+                isLoading={isLoading}
+            />
         </>
     );
 };

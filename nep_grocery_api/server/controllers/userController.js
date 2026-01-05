@@ -417,6 +417,10 @@ import fetch from 'node-fetch';
 import geoip from 'geoip-lite';
 
 // Helper: Calculate Haversine Ref: https://www.movable-type.co.uk/scripts/latlong.html
+const deg2rad = (deg) => {
+    return deg * (Math.PI / 180);
+}
+
 const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // Radius of the earth in km
     const dLat = deg2rad(lat2 - lat1);
@@ -429,9 +433,7 @@ const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
     return R * c;
 }
 
-const deg2rad = (deg) => {
-    return deg * (Math.PI / 180);
-}
+
 
 // Login
 export const loginUser = async (req, res) => {
@@ -479,9 +481,6 @@ export const loginUser = async (req, res) => {
 
         // --- COMPONENT 3: SUSPICIOUS ACTIVITY (GEO-VELOCITY) ---
         const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
-        // Mock IP for testing local travel if it's localhost (optional, but good for demo)
-        // const testIp = '1.1.1.1'; // USA
-        // const testIp2 = '202.70.75.1'; // Nepal
 
         const geo = geoip.lookup(ip); // Returns { ll: [lat, lon], ... }
 
@@ -511,6 +510,8 @@ export const loginUser = async (req, res) => {
                     requiresSecurityChallenge = true;
                 }
             }
+        } else {
+            console.log("[Geo-Velocity Test] Skipping check: No history or invalid geo.");
         }
 
         // If Challenge Triggered
