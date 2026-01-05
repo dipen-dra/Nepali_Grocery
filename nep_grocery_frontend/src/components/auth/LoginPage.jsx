@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -12,19 +12,17 @@ import { AuthContext } from '../../auth/AuthContext';
 import { NavigationContext } from '../../context/NavigationContext';
 
 const LoginPage = () => {
-    const [formData, setFormData] = useState({ email: '', password: '' });
-    const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-
-    // 2FA States
-    const [requires2FA, setRequires2FA] = useState(false);
-    const [otp, setOtp] = useState('');
-    const [userId, setUserId] = useState(null);
-    const [maskedEmail, setMaskedEmail] = useState('');
-    const [resendTimer, setResendTimer] = useState(0);
-
-    // SECURITY PIN States
     const [showPinModal, setShowPinModal] = useState(false);
+    // SECURITY PIN States
+    const [showOtpModal, setShowOtpModal] = useState(false); // Define showOtpModal here
+    const [resendTimer, setResendTimer] = useState(0); // Add resendTimer state
+    const [userId, setUserId] = useState(null); // Add userId state
+    const [otp, setOtp] = useState(''); // Add otp state
+    const [maskedEmail, setMaskedEmail] = useState(''); // Add maskedEmail state
+    const [requires2FA, setRequires2FA] = useState(false); // Add requires2FA state
+    const [isLoading, setIsLoading] = useState(false); // Add isLoading state
+    const [formData, setFormData] = useState({ email: '', password: '' }); // Add formData state
+    const [showPassword, setShowPassword] = useState(false); // Add showPassword state
 
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -48,9 +46,14 @@ const LoginPage = () => {
             if (res.data.requires2FA) {
                 setUserId(res.data.userId);
                 setRequires2FA(true); // Keep this for UI rendering logic
-                setMaskedEmail(res.data.message.split('to ')[1] || 'your email');
-                setShowOtpModal(true); // Show OTP modal (if you have one, otherwise relies on requires2FA)
-                toast.info(res.data.message);
+                // Safely extract email or fallback
+                const msg = res.data.message || '';
+                const extractedEmail = msg.includes('to ') ? msg.split('to ')[1] : 'your email';
+                setMaskedEmail(extractedEmail);
+
+                setShowOtpModal(true);
+                toast.info(msg || 'Verification code sent.');
+                setIsLoading(false);
                 setIsLoading(false); // Stop main loading, wait for OTP
 
                 startResendTimer();
@@ -73,7 +76,7 @@ const LoginPage = () => {
             }
 
             const errorMessage = error.response?.data?.message || 'Login failed.';
-            const headers = error.response?.headers;
+            const headers = error.response?.headers || {};
 
             const remaining = headers['ratelimit-remaining'];
             const reset = headers['ratelimit-reset'];
