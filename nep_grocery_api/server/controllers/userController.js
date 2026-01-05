@@ -341,7 +341,17 @@ const sendOtpEmail = async (email, otp) => {
             </div>
         `
     };
-    await transporter.sendMail(mailOptions);
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`[Email] OTP sent to ${email}`);
+    } catch (error) {
+        console.error("[Email Error] Failed to send OTP:", error);
+        // Fallback: still log to console in dev mode if email fails
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[FALLBACK] OTP: ${otp}`);
+        }
+        throw new Error("Failed to send verification email.");
+    }
 };
 
 const generateSecureOtp = () => {
