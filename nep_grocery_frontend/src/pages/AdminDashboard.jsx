@@ -16,7 +16,7 @@ import { Chatbot } from '../components/Chatbot';
 
 const queryClient = new QueryClient();
 
-const API_URL = "http://192.168.1.110:8081/api";
+const API_URL = "http://192.168.1.78:8081/api";
 
 const adminApi = axios.create({
     baseURL: API_URL,

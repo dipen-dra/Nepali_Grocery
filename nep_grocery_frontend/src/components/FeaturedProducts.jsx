@@ -9,7 +9,7 @@ const FeaturedProducts = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await axios.get("http://192.168.1.110:8081/api/products");
+        const response = await axios.get("http://192.168.1.78:8081/api/products");
 
         setProducts(response.data.slice(0, 5));
       } catch (error) {

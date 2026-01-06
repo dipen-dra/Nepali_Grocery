@@ -26,7 +26,7 @@ const app = express();
 const corsOptions = {
   origin: [
     "http://localhost:5173",
-    "http://192.168.1.110:5173",
+    "http://192.168.1.78:5173",
     "http://192.168.206.1:5173",
     "http://192.168.196.1:5173",
     process.env.CLIENT_URL
