@@ -3,13 +3,11 @@ import axios from 'axios';
 
 const getBaseUrl = () => {
     if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
-    if (window.location.hostname === 'localhost') return 'http://localhost:8081/api';
-    return 'http://192.168.1.78:8081/api';
+    return `http://${window.location.hostname}:8081/api`;
 };
 
 const getServerUrl = () => {
-    if (window.location.hostname === 'localhost') return 'http://localhost:8081';
-    return 'http://192.168.1.78:8081';
+    return `http://${window.location.hostname}:8081`;
 };
 
 const API_BASE_URL = getBaseUrl();

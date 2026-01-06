@@ -24,13 +24,25 @@ dotenv.config();
 const app = express();
 
 const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "http://192.168.1.78:5173",
-    "http://192.168.206.1:5173",
-    "http://192.168.196.1:5173",
-    process.env.CLIENT_URL
-  ].filter(Boolean),
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      "http://localhost:5173",
+      process.env.CLIENT_URL
+    ];
+
+    // Allow any 192.168.x.x origin (Local Network)
+    // RegExp to match http://192.168.X.X:5173
+    const localNetworkRegex = /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:5173$/;
+
+    if (allowedOrigins.includes(origin) || localNetworkRegex.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],

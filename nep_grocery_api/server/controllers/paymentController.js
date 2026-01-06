@@ -8,8 +8,15 @@ const ESEWA_URL = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
 const ESEWA_SCD = 'EPAYTEST';
 const ESEWA_SECRET = '8gBm/:&EnhH.1/q';
 
-const FRONTEND_SUCCESS_URL = `${process.env.FRONTEND_URL || 'http://192.168.1.78:5173'}/payment-success`;
-const FRONTEND_FAILURE_URL = `${process.env.FRONTEND_URL || 'http://192.168.1.78:5173'}/checkout`;
+import { getLocalIpAddress } from '../utils/network.js';
+
+// Dynamically determine frontend URL based on environment or local IP
+const LOCAL_IP = getLocalIpAddress();
+// Assuming Frontend runs on port 5173 by default
+const BASE_FRONTEND_URL = process.env.FRONTEND_URL || `http://${LOCAL_IP}:5173`;
+
+const FRONTEND_SUCCESS_URL = `${BASE_FRONTEND_URL}/payment-success`;
+const FRONTEND_FAILURE_URL = `${BASE_FRONTEND_URL}/checkout`;
 
 import { calculateOrderDetails } from '../utils/orderHelper.js';
 
