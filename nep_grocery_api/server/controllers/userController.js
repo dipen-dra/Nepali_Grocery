@@ -81,6 +81,8 @@
 // };
 
 // // Get Profile
+// // Get Profile (Duplicate Removed)
+// /*
 // export const getUserProfile = async (req, res) => {
 //     try {
 //         const user = await User.findById(req.user._id).select("-password");
@@ -93,6 +95,7 @@
 //         res.status(500).json({ success: false, message: "Server error while fetching profile" });
 //     }
 // };
+// */
 
 // // Update Profile Info
 // export const updateUserProfile = async (req, res) => {
@@ -563,8 +566,8 @@ export const loginUser = async (req, res) => {
         // Set cookie
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production', // true in prod, false in dev
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-site prod, 'lax' for local dev
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 

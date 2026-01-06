@@ -1,10 +1,19 @@
 import axios from 'axios';
 
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.1.78:8081/api';
+const getBaseUrl = () => {
+    if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+    if (window.location.hostname === 'localhost') return 'http://localhost:8081/api';
+    return 'http://192.168.1.78:8081/api';
+};
 
+const getServerUrl = () => {
+    if (window.location.hostname === 'localhost') return 'http://localhost:8081';
+    return 'http://192.168.1.78:8081';
+};
 
-export const SERVER_BASE_URL = 'http://192.168.1.78:8081';
+const API_BASE_URL = getBaseUrl();
+export const SERVER_BASE_URL = getServerUrl();
 
 const api = axios.create({
     baseURL: API_BASE_URL,
