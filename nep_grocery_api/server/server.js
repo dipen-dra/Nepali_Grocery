@@ -68,8 +68,13 @@ import { cleanInput } from "./middleware/cleanInput.js";
 // Apply rate limiting to all requests
 app.use(limiter);
 
-// Apply XSS Sanitization to all requests (Body, Query, Params)
+import { requestLogger } from "./middleware/requestLogger.js";
+
+// Apply XSS Sanitization
 app.use(cleanInput);
+
+// Apply Winston Logger (Tracks all requests)
+app.use(requestLogger);
 
 connectDB();
 
