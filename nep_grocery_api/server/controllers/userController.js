@@ -678,8 +678,38 @@ export const resetPassword = async (req, res) => {
     try {
         const decoded = jwt.verify(token, process.env.SECRET);
         const userId = decoded.id;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        // 1. Name Check: Password cannot contain user's name
+        const nameParts = user.fullName.toLowerCase().split(' ');
+        const isNameInPassword = nameParts.some(part => part.length > 2 && password.toLowerCase().includes(part));
+
+        if (isNameInPassword) {
+            return res.status(400).json({ success: false, message: "Password cannot contain your name." });
+        }
+
+        // 2. History Check: Cannot reuse last 5 passwords
+        if (user.passwordHistory && user.passwordHistory.length > 0) {
+            for (const oldHash of user.passwordHistory) {
+                const isMatch = await bcrypt.compare(password, oldHash);
+                if (isMatch) {
+                    return res.status(400).json({ success: false, message: "You cannot reuse a recent password." });
+                }
+            }
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
-        await User.findByIdAndUpdate(userId, { password: hashedPassword });
+
+        // 3. Update User: Set new password, push to history (keep max 5), update timestamp
+        user.password = hashedPassword;
+        user.passwordHistory = [hashedPassword, ...(user.passwordHistory || [])].slice(0, 5);
+        user.passwordLastChangedAt = new Date();
+
+        await user.save();
 
         return res.status(200).json({
             success: true,

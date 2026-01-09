@@ -58,6 +58,9 @@ const UserSchema = new Schema(
       coordinates: { lat: Number, lon: Number }, // from geoip-lite
       timestamp: { type: Date, default: Date.now }
     }],
+    // --- PASSWORD SECURITY ---
+    passwordHistory: [{ type: String }], // Stores last 5 hashed passwords
+    passwordLastChangedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
