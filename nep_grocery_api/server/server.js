@@ -63,8 +63,13 @@ const limiter = rateLimit({
 // Apply CORS globally before rate limiting
 app.use(cors(corsOptions));
 
+import { cleanInput } from "./middleware/cleanInput.js";
+
 // Apply rate limiting to all requests
 app.use(limiter);
+
+// Apply XSS Sanitization to all requests (Body, Query, Params)
+app.use(cleanInput);
 
 connectDB();
 
