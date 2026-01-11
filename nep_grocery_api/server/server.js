@@ -6,6 +6,8 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import https from "https";
+import fs from "fs";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 
@@ -118,9 +120,26 @@ app.use(errorHandler);
 
 
 const PORT = process.env.PORT || 8081;
-const server = app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT} and http://192.168.1.110:${PORT}`);
-});
+
+let server;
+try {
+  const httpsOptions = {
+    key: fs.readFileSync(path.join(__dirname, 'server.key')),
+    cert: fs.readFileSync(path.join(__dirname, 'server.cert')),
+  };
+
+  server = https.createServer(httpsOptions, app).listen(PORT, () => {
+    console.log(`🔐 Secure Server running at https://localhost:${PORT}`);
+    console.log(`🔐 Network Access: https://192.168.1.110:${PORT}`);
+  });
+} catch (error) {
+  console.error("⚠️  HTTPS Error: SSL Certificates (server.key, server.cert) not found or invalid.");
+  console.error("⚠️  Falling back to HTTP for development. Please generate certificates to enable End-to-End Encryption.");
+
+  server = app.listen(PORT, () => {
+    console.log(`⚠️  Insecure Server running at http://localhost:${PORT} and http://192.168.1.110:${PORT}`);
+  });
+}
 
 
 export { app, server };
