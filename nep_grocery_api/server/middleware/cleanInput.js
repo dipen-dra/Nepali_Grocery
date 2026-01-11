@@ -10,10 +10,18 @@ export const cleanInput = (req, res, next) => {
             req.body = sanitizeObject(req.body);
         }
         if (req.query) {
-            req.query = sanitizeObject(req.query);
+            // Fix: Modify keys in-place instead of reassigning req.query
+            const cleanedQuery = sanitizeObject(req.query);
+            for (const key in cleanedQuery) {
+                req.query[key] = cleanedQuery[key];
+            }
         }
         if (req.params) {
-            req.params = sanitizeObject(req.params);
+            // Fix: Modify keys in-place instead of reassigning req.params
+            const cleanedParams = sanitizeObject(req.params);
+            for (const key in cleanedParams) {
+                req.params[key] = cleanedParams[key];
+            }
         }
         next();
     } catch (error) {

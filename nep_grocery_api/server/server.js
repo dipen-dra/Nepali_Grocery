@@ -60,8 +60,13 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again after 15 minutes',
 });
 
+import helmet from "helmet";
+
 // Apply CORS globally before rate limiting
 app.use(cors(corsOptions));
+
+// Apply Helmet for security headers (Hides stack info, prevents clickjacking, etc.)
+app.use(helmet());
 
 import { cleanInput } from "./middleware/cleanInput.js";
 

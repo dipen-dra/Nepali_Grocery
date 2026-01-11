@@ -3,6 +3,7 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import User from '../models/User.js';
 import fetch from 'node-fetch';
+import { v4 as uuidv4 } from 'uuid';
 
 const ESEWA_URL = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
 const ESEWA_SCD = 'EPAYTEST';
@@ -48,7 +49,7 @@ export const initiateEsewaPayment = async (req, res) => {
         // helper: itemsTotal + 50 - discount. 
         // eSewa logic: itemsTotal + 50 + 0 + 0 - discount. matches.
 
-        const transaction_uuid = `hg-${Date.now()}`;
+        const transaction_uuid = `hg-${uuidv4()}`;
 
         const newOrder = new Order({
             customer: user._id,
