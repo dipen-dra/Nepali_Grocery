@@ -3,7 +3,9 @@ import { AuthContext } from '../auth/AuthContext.jsx';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-toastify';
 import { Avatar } from '../components/Avatar';
-import { Loader2, Edit, Save, Edit2, User, Mail, ShoppingCart, Wallet, MapPin, Gift } from 'lucide-react';
+import { Loader2, Edit, Save, Edit2, User, Mail, ShoppingCart, Wallet, MapPin, Gift, Shield, CheckCircle } from 'lucide-react';
+import PinSetupModal from '../components/auth/PinSetupModal';
+import PinVerifyModal from '../components/auth/PinVerifyModal';
 import axios from 'axios';
 import { MyOrdersPage } from './MyOrderPage.jsx';
 import { PaymentHistoryPage } from './PaymentHistory.jsx';
@@ -71,6 +73,7 @@ const ProfilePage = () => {
 
     const [activeTab, setActiveTab] = useState('profile');
     const [isEditMode, setIsEditMode] = useState(false);
+    const [isPinModalOpen, setIsPinModalOpen] = useState(false);
     const [formData, setFormData] = useState({ fullName: '', email: '', location: '' });
     const [isFetchingLocation, setIsFetchingLocation] = useState(false);
 
@@ -85,23 +88,50 @@ const ProfilePage = () => {
         }
     }, [user, updateUser]);
 
+    const [pendingUpdate, setPendingUpdate] = useState(null); // To store the update payload while waiting for PIN
+    const [isPinVerifyOpen, setIsPinVerifyOpen] = useState(false); // To toggle verification modal
+
     const profileUpdateMutation = useMutation({
         mutationFn: updateUserProfile,
         onSuccess: () => {
             toast.success('Profile updated successfully!');
             queryClient.invalidateQueries({ queryKey: ['userProfile'] });
             setIsEditMode(false);
+            setPendingUpdate(null);
         },
-        onError: (error) => toast.error(error.response?.data?.message || 'Failed to update profile.')
+        onError: (error) => {
+            // Check for PIN requirement (Backend sends 403 Forbidden with specific message)
+            if (error.response?.status === 403 && error.response?.data?.message?.includes("Security PIN")) {
+                toast.info("Please verify your Security PIN to continue.");
+                setIsPinVerifyOpen(true);
+            } else {
+                toast.error(error.response?.data?.message || 'Failed to update profile.');
+            }
+        }
     });
+
+    const handlePinVerifySubmit = (pin) => {
+        if (pendingUpdate) {
+            profileUpdateMutation.mutate({ ...pendingUpdate, pin });
+            setIsPinVerifyOpen(false);
+        }
+    };
+
+    const attemptUpdate = (newData) => {
+        setPendingUpdate(newData); // Store it
+        profileUpdateMutation.mutate(newData); // Try normally
+    };
 
     const pictureUpdateMutation = useMutation({
         mutationFn: updateUserProfilePicture,
-        onSuccess: () => {
-            toast.success('Profile picture updated successfully!');
+        onSuccess: (data) => {
+            toast.success('Profile picture updated!');
             queryClient.invalidateQueries({ queryKey: ['userProfile'] });
+            updateUser(data.data);
         },
-        onError: (error) => toast.error(error.response?.data?.message || 'Failed to update picture.')
+        onError: (error) => {
+            toast.error(error.response?.data?.message || 'Failed to update picture.');
+        }
     });
 
     const handleInputChange = (e) => {
@@ -110,8 +140,10 @@ const ProfilePage = () => {
 
     const handleFormSubmit = (e) => {
         e.preventDefault();
-        profileUpdateMutation.mutate(formData);
+        attemptUpdate(formData);
     };
+
+    // ...
 
     const handleImageChange = (e) => {
         const file = e.target.files[0];
@@ -121,7 +153,9 @@ const ProfilePage = () => {
         pictureUpdateMutation.mutate(pictureFormData);
     };
 
+    // Fetch Location... (No change needed) 
     const handleFetchLocation = () => {
+        // ... (standard fetch location)
         if (!isEditMode) return;
         setIsFetchingLocation(true);
         toast.info("Fetching your location...");
@@ -244,25 +278,52 @@ const ProfilePage = () => {
                                         <ProfileInfoField icon={Mail} label="Email Address" value={user.email} />
                                         <ProfileInfoField icon={MapPin} label="Location" value={user.location} isPlaceholder={!user.location} />
 
-                                        {/* 2FA Toggle */}
-                                        <div className="md:col-span-2 mt-4 pt-4 border-t">
-                                            <div className="flex items-center justify-between">
+                                        <div className="md:col-span-2 mt-6 pt-6 border-t space-y-6">
+                                            <h3 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                                                <Shield className="text-green-600" /> Security Settings
+                                            </h3>
+
+                                            {/* 2FA Toggle */}
+                                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
                                                 <div>
                                                     <h4 className="text-sm font-semibold text-gray-800">Two-Factor Authentication (2FA)</h4>
-                                                    <p className="text-xs text-gray-500">Enable 2FA for enhanced account security.</p>
+                                                    <p className="text-xs text-gray-500 mt-1">Require an email OTP for every login.</p>
                                                 </div>
                                                 <label className="relative inline-flex items-center cursor-pointer">
                                                     <input
                                                         type="checkbox"
                                                         checked={user.twoFactorEnabled || false}
                                                         onChange={() => {
-                                                            profileUpdateMutation.mutate({ twoFactorEnabled: !user.twoFactorEnabled });
+                                                            attemptUpdate({ twoFactorEnabled: !user.twoFactorEnabled });
                                                         }}
                                                         disabled={profileUpdateMutation.isLoading}
                                                         className="sr-only peer"
                                                     />
                                                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
                                                 </label>
+                                            </div>
+
+                                            {/* Security PIN */}
+                                            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                                <div>
+                                                    <h4 className="text-sm font-semibold text-gray-800">Security PIN</h4>
+                                                    <p className="text-xs text-gray-500 mt-1">Used for high-value transactions and account changes.</p>
+                                                </div>
+                                                <div>
+                                                    {user.isPinSet ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-100 text-green-700 text-sm font-medium">
+                                                            <CheckCircle size={14} /> PIN Active
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsPinModalOpen(true)}
+                                                            className="px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition shadow-sm"
+                                                        >
+                                                            Set PIN
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </>
@@ -283,7 +344,18 @@ const ProfilePage = () => {
                 {activeTab === 'orders' && <MyOrdersPage />}
                 {activeTab === 'payments' && <PaymentHistoryPage />}
             </div>
-        </div>
+            <PinSetupModal
+                isOpen={isPinModalOpen}
+                onClose={() => setIsPinModalOpen(false)}
+                onSuccess={() => queryClient.invalidateQueries({ queryKey: ['userProfile'] })}
+            />
+            <PinVerifyModal
+                isOpen={isPinVerifyOpen}
+                onClose={() => setIsPinVerifyOpen(false)}
+                onSubmit={handlePinVerifySubmit}
+                isLoading={profileUpdateMutation.isLoading}
+            />
+        </div >
     );
 };
 

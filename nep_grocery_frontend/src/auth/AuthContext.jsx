@@ -1,6 +1,8 @@
 import { createContext, useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/api";
+import { toast } from 'react-toastify';
+import dayjs from 'dayjs';
 
 export const AuthContext = createContext();
 
@@ -9,6 +11,7 @@ const AuthContextProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
+
     // Check for existing session using the profile endpoint
     useEffect(() => {
         const checkAuth = async () => {
@@ -16,6 +19,18 @@ const AuthContextProvider = ({ children }) => {
                 const { data } = await api.get('/auth/profile');
                 if (data.success && data.data) {
                     setUser(data.data);
+
+                    // Check Password Expiration (30 Days)
+                    if (data.data.passwordLastChangedAt) {
+                        const lastChanged = dayjs(data.data.passwordLastChangedAt);
+                        const daysDiff = dayjs().diff(lastChanged, 'day');
+
+                        if (daysDiff > 30) {
+                            toast.warning("It's been a while! Please update your password for better security.", {
+                                autoClose: 10000
+                            });
+                        }
+                    }
                 }
             } catch (error) {
                 // console.error("Session check failed", error);
@@ -30,11 +45,6 @@ const AuthContextProvider = ({ children }) => {
     const login = (data) => {
         if (data && data.data) {
             const userData = data.data;
-
-            // Store token in localStorage for header-based auth (fallback for cookies)
-            if (data.token) {
-                localStorage.setItem('token', data.token);
-            }
 
             setUser(userData);
 

@@ -30,6 +30,11 @@ export const authenticateUser = async (req, res, next) => {
             return res.status(401).json({ success: false, message: "Authentication failed: User not found." });
         }
 
+        // Security Check: Account Deactivation
+        if (!user.isActive) {
+            return res.status(403).json({ success: false, message: "Your account has been deactivated. Please contact support." });
+        }
+
         req.user = user;
         next();
     } catch (err) {

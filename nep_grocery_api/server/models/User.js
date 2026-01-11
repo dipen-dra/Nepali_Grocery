@@ -34,6 +34,13 @@ const UserSchema = new Schema(
       type: Number,
       default: 0,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    securityPin: {
+      type: String, // Will be hashed
+    },
     // --- 2FA FIELDS ---
     twoFactorEnabled: {
       type: Boolean,
@@ -45,6 +52,15 @@ const UserSchema = new Schema(
     otpExpires: {
       type: Date,
     },
+    // --- SECURITY LOGS ---
+    loginHistory: [{
+      ip: String,
+      coordinates: { lat: Number, lon: Number }, // from geoip-lite
+      timestamp: { type: Date, default: Date.now }
+    }],
+    // --- PASSWORD SECURITY ---
+    passwordHistory: [{ type: String }], // Stores last 5 hashed passwords
+    passwordLastChangedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );

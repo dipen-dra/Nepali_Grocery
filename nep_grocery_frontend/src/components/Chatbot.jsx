@@ -4,6 +4,7 @@ import { Bot, X, Send, User, Loader2, MessageSquare } from 'lucide-react';
 import { AuthContext } from '../auth/AuthContext';
 import { useQueries } from '@tanstack/react-query';
 import api from '../api/api';
+import DOMPurify from 'dompurify';
 
 const fetchData = async (endpoint) => {
     try {
@@ -175,7 +176,7 @@ export const Chatbot = ({ isVisible, onClose, cartItems = [] }) => {
                         <div key={index} className={`flex items-end gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             {msg.role === 'bot' && <div className="w-8 h-8 rounded-full bg-green-600 flex items-center justify-center shrink-0"><Bot size={20} className="text-white" /></div>}
                             <div className={`max-w-xs px-4 py-2.5 rounded-2xl shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-lg' : 'bg-white text-gray-800 border border-gray-100 rounded-bl-lg'}`}>
-                                <p className="text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: msg.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') }}></p>
+                                <p className="text-sm whitespace-pre-wrap" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(msg.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')) }}></p>
                                 {msg.suggestions && !isLoadingResponse && (
                                     <div className="mt-3 grid grid-cols-1 gap-2">
                                         {msg.suggestions.map((s, i) => (

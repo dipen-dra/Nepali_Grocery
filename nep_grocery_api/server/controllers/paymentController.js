@@ -3,13 +3,21 @@ import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import User from '../models/User.js';
 import fetch from 'node-fetch';
+import { v4 as uuidv4 } from 'uuid';
 
 const ESEWA_URL = 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
 const ESEWA_SCD = 'EPAYTEST';
 const ESEWA_SECRET = '8gBm/:&EnhH.1/q';
 
-const FRONTEND_SUCCESS_URL = `${process.env.FRONTEND_URL || 'http://192.168.1.110:5173'}/payment-success`;
-const FRONTEND_FAILURE_URL = `${process.env.FRONTEND_URL || 'http://192.168.1.110:5173'}/checkout`;
+import { getLocalIpAddress } from '../utils/network.js';
+
+// Dynamically determine frontend URL based on environment or local IP
+const LOCAL_IP = getLocalIpAddress();
+// Assuming Frontend runs on port 5173 by default
+const BASE_FRONTEND_URL = process.env.FRONTEND_URL || `http://${LOCAL_IP}:5173`;
+
+const FRONTEND_SUCCESS_URL = `${BASE_FRONTEND_URL}/payment-success`;
+const FRONTEND_FAILURE_URL = `${BASE_FRONTEND_URL}/checkout`;
 
 import { calculateOrderDetails } from '../utils/orderHelper.js';
 
@@ -41,7 +49,7 @@ export const initiateEsewaPayment = async (req, res) => {
         // helper: itemsTotal + 50 - discount. 
         // eSewa logic: itemsTotal + 50 + 0 + 0 - discount. matches.
 
-        const transaction_uuid = `hg-${Date.now()}`;
+        const transaction_uuid = `hg-${uuidv4()}`;
 
         const newOrder = new Order({
             customer: user._id,
@@ -72,7 +80,7 @@ export const initiateEsewaPayment = async (req, res) => {
             product_code: ESEWA_SCD,
             signature: signature,
             signed_field_names: 'total_amount,transaction_uuid,product_code',
-            success_url: `${process.env.BACKEND_URL || 'http://192.168.1.110:8081'}/api/payment/esewa/verify`,
+            success_url: `${process.env.BACKEND_URL || 'http://192.168.1.78:8081'}/api/payment/esewa/verify`,
             failure_url: `${FRONTEND_FAILURE_URL}?payment=failure`,
         };
 
@@ -149,7 +157,7 @@ export const verifyEsewaPayment = async (req, res) => {
                 return res.redirect(`${FRONTEND_SUCCESS_URL}?message=${encodeURIComponent(messageParts.join(' '))}`);
             }
 
-            return res.redirect(`${process.env.FRONTEND_URL || 'http://192.168.1.110:5173'}/dashboard/orders`);
+            return res.redirect(`${process.env.FRONTEND_URL || 'http://192.168.1.78:5173'}/dashboard/orders`);
         } else {
             await Order.findOneAndDelete({ transactionId: decodedData.transaction_uuid });
             return res.redirect(`${FRONTEND_FAILURE_URL}?payment=failure&message=${encodeURIComponent('Transaction verification failed.')}`);

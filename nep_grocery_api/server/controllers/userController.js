@@ -81,6 +81,8 @@
 // };
 
 // // Get Profile
+// // Get Profile (Duplicate Removed)
+// /*
 // export const getUserProfile = async (req, res) => {
 //     try {
 //         const user = await User.findById(req.user._id).select("-password");
@@ -93,6 +95,7 @@
 //         res.status(500).json({ success: false, message: "Server error while fetching profile" });
 //     }
 // };
+// */
 
 // // Update Profile Info
 // export const updateUserProfile = async (req, res) => {
@@ -265,7 +268,58 @@ const createUserData = (user) => ({
     location: user.location,
     groceryPoints: user.groceryPoints,
     twoFactorEnabled: user.twoFactorEnabled, // Added for frontend toggle state
+    isPinSet: !!user.securityPin, // Boolean flag for frontend
 });
+
+// Set Security PIN
+export const setUserPin = async (req, res) => {
+    try {
+        const { pin } = req.body;
+        const userId = req.user._id;
+
+        if (!pin || pin.length !== 6 || isNaN(pin)) {
+            return res.status(400).json({ success: false, message: "PIN must be a 6-digit number." });
+        }
+
+        const user = await User.findById(userId);
+        if (user.securityPin) {
+            return res.status(400).json({ success: false, message: "PIN already set. Please contact support to reset." });
+        }
+
+        const hashedPin = await bcrypt.hash(pin, 10);
+        user.securityPin = hashedPin;
+        await user.save();
+
+        res.status(200).json({ success: true, message: "Security PIN set successfully." });
+    } catch (error) {
+        console.error("Set PIN Error:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
+// Verify Security PIN (Middleware or Endpoint)
+export const verifyUserPin = async (req, res) => {
+    try {
+        const { pin } = req.body;
+        const userId = req.user._id;
+
+        const user = await User.findById(userId);
+        if (!user.securityPin) {
+            return res.status(400).json({ success: false, message: "No PIN set for this account." });
+        }
+
+        const isMatch = await bcrypt.compare(pin, user.securityPin);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: "Incorrect PIN." });
+        }
+
+        // Return a temporary "PIN Verified" token or simple success
+        res.status(200).json({ success: true, message: "PIN Verified" });
+    } catch (error) {
+        console.error("Verify PIN Error:", error);
+        res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
 
 const sendOtpEmail = async (email, otp) => {
     const transporter = nodemailer.createTransport({
@@ -290,7 +344,17 @@ const sendOtpEmail = async (email, otp) => {
             </div>
         `
     };
-    await transporter.sendMail(mailOptions);
+    try {
+        await transporter.sendMail(mailOptions);
+        console.log(`[Email] OTP sent to ${email}`);
+    } catch (error) {
+        console.error("[Email Error] Failed to send OTP:", error);
+        // Fallback: still log to console in dev mode if email fails
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[FALLBACK] OTP: ${otp}`);
+        }
+        throw new Error("Failed to send verification email.");
+    }
 };
 
 const generateSecureOtp = () => {
@@ -363,10 +427,31 @@ export const registerUser = async (req, res) => {
 
 import fetch from 'node-fetch';
 
+import geoip from 'geoip-lite';
+
+// Helper: Calculate Haversine Ref: https://www.movable-type.co.uk/scripts/latlong.html
+const deg2rad = (deg) => {
+    return deg * (Math.PI / 180);
+}
+
+const getDistanceFromLatLonInKm = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+
+
 // Login
 export const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, pin } = req.body; // Added pin param
         if (!email || !password) {
             return res.status(400).json({ success: false, message: "Email and password are required." });
         }
@@ -380,16 +465,16 @@ export const loginUser = async (req, res) => {
             return res.status(401).json({ success: false, message: "Invalid email or password." });
         }
 
-        // --- 2FA LOGIC ---
+        // --- 2FA LOGIC (Existing) ---
         if (user.twoFactorEnabled) {
             const otp = generateSecureOtp();
-            user.otp = otp;
+            user.otp = await bcrypt.hash(otp, 10); // Hash OTP
             user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
             await user.save();
 
             // Send OTP Email
             try {
-                await sendOtpEmail(user.email, otp);
+                await sendOtpEmail(user.email, otp); // Send plain OTP
             } catch (emailError) {
                 console.error("Failed to send OTP email:", emailError);
                 return res.status(500).json({ success: false, message: "Failed to send verification code." });
@@ -407,13 +492,82 @@ export const loginUser = async (req, res) => {
         }
         // --- END 2FA LOGIC (Blocks login until OTP is verified) ---
 
+        // --- COMPONENT 3: SUSPICIOUS ACTIVITY (GEO-VELOCITY) ---
+        const ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '127.0.0.1';
+
+        const geo = geoip.lookup(ip); // Returns { ll: [lat, lon], ... }
+
+        let requiresSecurityChallenge = false;
+
+        // Only check if we have history and valid geo data
+        if (user.loginHistory && user.loginHistory.length > 0 && geo && geo.ll) {
+            const lastLogin = user.loginHistory[user.loginHistory.length - 1];
+
+            if (lastLogin.coordinates && lastLogin.coordinates.lat) {
+                const distanceKm = getDistanceFromLatLonInKm(
+                    lastLogin.coordinates.lat, lastLogin.coordinates.lon,
+                    geo.ll[0], geo.ll[1]
+                );
+
+                const timeDiffHours = (Date.now() - new Date(lastLogin.timestamp).getTime()) / (1000 * 60 * 60);
+
+                // Velocity: km / hour
+                // If timeDiff is very small (e.g. 0), velocity is infinite.
+                // Threshold: 800 km/h (approx passenger jet cruise speed)
+                const velocity = timeDiffHours > 0 ? distanceKm / timeDiffHours : (distanceKm > 50 ? 9999 : 0);
+
+                console.log(`[Geo-Velocity] Dist: ${distanceKm.toFixed(2)}km, Time: ${timeDiffHours.toFixed(2)}h, Speed: ${velocity.toFixed(2)}km/h`);
+
+                if (velocity > 800) {
+                    console.warn(`[Suspicious] ${user.email} moved too fast! Triggering Challenge.`);
+                    requiresSecurityChallenge = true;
+                }
+            }
+        } else {
+            console.log("[Geo-Velocity Test] Skipping check: No history or invalid geo.");
+        }
+
+        // If Challenge Triggered
+        if (requiresSecurityChallenge) {
+            // If user has NO PIN set, we might fallback to email OTP (simplification: just warn or force generic 2FA if existing)
+            // But if they HAVE a PIN, we demand it.
+            if (user.securityPin) {
+                if (!pin) {
+                    return res.status(403).json({
+                        success: false,
+                        requiresPin: true,
+                        message: "Suspicious login detected (traveling too fast). Please enter your Security PIN."
+                    });
+                }
+                // Verify PIN
+                const isPinMatch = await bcrypt.compare(pin, user.securityPin);
+                if (!isPinMatch) {
+                    return res.status(401).json({ success: false, message: "Invalid Security PIN." });
+                }
+                // If PIN matches, we proceed to login!
+            }
+        }
+
+        // --- SUCCESSFUL LOGIN ---
+        // Log this login (if we have geo data)
+        if (geo && geo.ll) {
+            user.loginHistory.push({
+                ip: ip,
+                coordinates: { lat: geo.ll[0], lon: geo.ll[1] },
+                timestamp: new Date()
+            });
+            // Keep history short (last 5)
+            if (user.loginHistory.length > 5) user.loginHistory.shift();
+            await user.save();
+        }
+
         const token = jwt.sign({ _id: user._id, role: user.role }, process.env.SECRET, { expiresIn: "7d" });
 
         // Set cookie
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production', // true in prod, false in dev
+            sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' for cross-site prod, 'lax' for local dev
             maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
         });
 
@@ -421,7 +575,6 @@ export const loginUser = async (req, res) => {
             success: true,
             message: "Login successful",
             role: user.role, // Return role for frontend redirect logic
-            token, // Return token for header-based auth
             data: createUserData(user),
         });
     } catch (error) {
@@ -525,8 +678,38 @@ export const resetPassword = async (req, res) => {
     try {
         const decoded = jwt.verify(token, process.env.SECRET);
         const userId = decoded.id;
+        const user = await User.findById(userId);
+
+        if (!user) {
+            return res.status(404).json({ success: false, message: "User not found." });
+        }
+
+        // 1. Name Check: Password cannot contain user's name
+        const nameParts = user.fullName.toLowerCase().split(' ');
+        const isNameInPassword = nameParts.some(part => part.length > 2 && password.toLowerCase().includes(part));
+
+        if (isNameInPassword) {
+            return res.status(400).json({ success: false, message: "Password cannot contain your name." });
+        }
+
+        // 2. History Check: Cannot reuse last 5 passwords
+        if (user.passwordHistory && user.passwordHistory.length > 0) {
+            for (const oldHash of user.passwordHistory) {
+                const isMatch = await bcrypt.compare(password, oldHash);
+                if (isMatch) {
+                    return res.status(400).json({ success: false, message: "You cannot reuse a recent password." });
+                }
+            }
+        }
+
         const hashedPassword = await bcrypt.hash(password, 10);
-        await User.findByIdAndUpdate(userId, { password: hashedPassword });
+
+        // 3. Update User: Set new password, push to history (keep max 5), update timestamp
+        user.password = hashedPassword;
+        user.passwordHistory = [hashedPassword, ...(user.passwordHistory || [])].slice(0, 5);
+        user.passwordLastChangedAt = new Date();
+
+        await user.save();
 
         return res.status(200).json({
             success: true,
@@ -585,7 +768,9 @@ export const verifyOtp = async (req, res) => {
             return res.status(400).json({ success: false, message: "OTP has expired. Please login again to get a new code." });
         }
 
-        if (user.otp !== otp) {
+        // --- HASH COMPARISON ---
+        const isMatch = await bcrypt.compare(otp, user.otp);
+        if (!isMatch) {
             return res.status(400).json({ success: false, message: "Invalid OTP. Please try again." });
         }
 
@@ -632,11 +817,11 @@ export const resendOtp = async (req, res) => {
         }
 
         const otp = generateSecureOtp();
-        user.otp = otp;
+        user.otp = await bcrypt.hash(otp, 10); // Hash OTP
         user.otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
         await user.save();
 
-        await sendOtpEmail(user.email, otp);
+        await sendOtpEmail(user.email, otp); // Send plain OTP
 
         res.status(200).json({
             success: true,
@@ -650,15 +835,29 @@ export const resendOtp = async (req, res) => {
 
 // Update Profile Info
 export const updateUserProfile = async (req, res) => {
-    const { fullName, email, location, twoFactorEnabled } = req.body;
+    const { fullName, email, location, twoFactorEnabled, pin } = req.body; // Added pin
     try {
         const user = await User.findById(req.user._id);
         if (!user) {
             return res.status(404).json({ success: false, message: "User not found" });
         }
 
+        // --- TAMPER PROTECTION: SENSITIVE ACTIONS REQUIRE PIN ---
+        const isDisabling2FA = twoFactorEnabled === false && user.twoFactorEnabled === true;
+        const isChangingEmail = email && email !== user.email;
+
+        if ((isDisabling2FA || isChangingEmail) && user.securityPin) {
+            if (!pin) {
+                return res.status(403).json({ success: false, message: "Security PIN required to change sensitive settings." });
+            }
+            const isPinMatch = await bcrypt.compare(pin, user.securityPin);
+            if (!isPinMatch) {
+                return res.status(403).json({ success: false, message: "Invalid Security PIN." });
+            }
+        }
+
         // Check if email is being updated and if it's already taken
-        if (email && email !== user.email) {
+        if (isChangingEmail) {
             const existingUser = await User.findOne({ email });
             if (existingUser) {
                 return res.status(400).json({ success: false, message: "Email is already in use by another account." });

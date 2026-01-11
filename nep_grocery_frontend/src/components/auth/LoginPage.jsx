@@ -1,8 +1,10 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Lottie from "lottie-react";
+
+import PinVerifyModal from './PinVerifyModal';
 import groceryAnimation from '../../assets/grocery-animation.json';
 import Navbar from '../Navbar';
 import api from '../../api/api';
@@ -10,16 +12,17 @@ import { AuthContext } from '../../auth/AuthContext';
 import { NavigationContext } from '../../context/NavigationContext';
 
 const LoginPage = () => {
-    const [formData, setFormData] = useState({ email: '', password: '' });
-    const [showPassword, setShowPassword] = useState(false);
-    const [isLoading, setIsLoading] = useState(false);
-
-    // 2FA States
-    const [requires2FA, setRequires2FA] = useState(false);
-    const [otp, setOtp] = useState('');
-    const [userId, setUserId] = useState(null);
-    const [maskedEmail, setMaskedEmail] = useState('');
-    const [resendTimer, setResendTimer] = useState(0);
+    const [showPinModal, setShowPinModal] = useState(false);
+    // SECURITY PIN States
+    const [showOtpModal, setShowOtpModal] = useState(false); // Define showOtpModal here
+    const [resendTimer, setResendTimer] = useState(0); // Add resendTimer state
+    const [userId, setUserId] = useState(null); // Add userId state
+    const [otp, setOtp] = useState(''); // Add otp state
+    const [maskedEmail, setMaskedEmail] = useState(''); // Add maskedEmail state
+    const [requires2FA, setRequires2FA] = useState(false); // Add requires2FA state
+    const [isLoading, setIsLoading] = useState(false); // Add isLoading state
+    const [formData, setFormData] = useState({ email: '', password: '' }); // Add formData state
+    const [showPassword, setShowPassword] = useState(false); // Add showPassword state
 
     const { login } = useContext(AuthContext);
     const navigate = useNavigate();
@@ -28,51 +31,83 @@ const LoginPage = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const handleLoginSubmit = async (e) => {
+    const handleSubmit = async (e) => { // Renamed from handleLoginSubmit to handleSubmit
         e.preventDefault();
         if (!formData.email || !formData.password) {
             toast.error('Please enter both email and password.');
             return;
         }
-        setIsLoading(true);
-        try {
-            const { data } = await api.post('/auth/login', formData);
+        setIsLoading(true); // Main page loading
 
-            if (data.requires2FA) {
-                setRequires2FA(true);
-                setUserId(data.userId);
-                setMaskedEmail(data.message.split('to ')[1] || 'your email');
-                toast.info(data.message);
+        try {
+            // Initial Attempt (without PIN)
+            const res = await api.post('/auth/login', formData);
+
+            if (res.data.requires2FA) {
+                setUserId(res.data.userId);
+                setRequires2FA(true); // Keep this for UI rendering logic
+                // Safely extract email or fallback
+                const msg = res.data.message || '';
+                const extractedEmail = msg.includes('to ') ? msg.split('to ')[1] : 'your email';
+                setMaskedEmail(extractedEmail);
+
+                setShowOtpModal(true);
+                toast.info(msg || 'Verification code sent.');
                 setIsLoading(false);
+                setIsLoading(false); // Stop main loading, wait for OTP
+
                 startResendTimer();
-            } else {
-                // Standard Login Success
-                login(data);
-                toast.success('Login successful!');
-                setIsLoading(false);
+                return;
             }
+
+            // Standard Login Success
+            login(res.data); // Assuming res.data contains user info and token
+            toast.success('Login successful!');
+            setIsLoading(false);
+
+            // navigate(res.data.role === 'admin' ? '/admin/dashboard' : '/'); // Example navigation based on role
         } catch (error) {
             setIsLoading(false);
+
+            if (error.response && error.response.status === 403 && error.response.data.requiresPin) {
+                toast.warning(error.response.data.message);
+                setShowPinModal(true);
+                return;
+            }
+
             const errorMessage = error.response?.data?.message || 'Login failed.';
-            const headers = error.response?.headers;
+            const headers = error.response?.headers || {};
 
-            if (headers) {
-                const remaining = headers['ratelimit-remaining'];
-                const reset = headers['ratelimit-reset'];
+            const remaining = headers['ratelimit-remaining'];
+            const reset = headers['ratelimit-reset'];
 
-                if (remaining === '0' || error.response?.status === 429) {
-                    const minutesLeft = Math.ceil(reset / 60);
-                    toast.error(`IP blocked due to too many requests. Please try again in ${minutesLeft} minutes.`);
-                } else if (remaining) {
-                    toast.error(`${errorMessage} Attempts left: ${remaining}`);
-                } else {
-                    toast.error(errorMessage);
-                }
+            if (remaining === '0' || error.response?.status === 429) {
+                const minutesLeft = Math.ceil(reset / 60);
+                toast.error(`IP blocked due to too many requests. Please try again in ${minutesLeft} minutes.`);
+            } else if (remaining) {
+                toast.error(`${errorMessage} Attempts left: ${remaining}`);
             } else {
                 toast.error(errorMessage);
             }
         }
     };
+
+    const handlePinSubmit = async (pin) => {
+        setIsLoading(true);
+        try {
+            // Retry login with PIN
+            const res = await api.post('/auth/login', { ...formData, pin });
+
+            login(res.data);
+            toast.success('Identity Verified! Login successful.');
+            setShowPinModal(false);
+            setIsLoading(false);
+        } catch (error) {
+            setIsLoading(false);
+            toast.error(error.response?.data?.message || "Invalid PIN");
+        }
+    };
+
 
     const handleOtpSubmit = async (e) => {
         e.preventDefault();
@@ -196,7 +231,7 @@ const LoginPage = () => {
                                         <p className="text-gray-500 mt-2">Enter your email and password to access your account.</p>
                                     </div>
 
-                                    <form className="space-y-6" onSubmit={handleLoginSubmit}>
+                                    <form className="space-y-6" onSubmit={handleSubmit}>
                                         <div>
                                             <label className="text-sm font-semibold text-gray-700 block mb-2">Email Address</label>
                                             <input
@@ -331,6 +366,8 @@ const LoginPage = () => {
                                     </div>
 
                                     <div className="mt-8 text-center">
+
+
                                         <button
                                             onClick={() => setRequires2FA(false)}
                                             className="text-gray-400 hover:text-gray-600 text-sm"
@@ -344,6 +381,12 @@ const LoginPage = () => {
                     </div>
                 </div>
             </div>
+            <PinVerifyModal
+                isOpen={showPinModal}
+                onClose={() => setShowPinModal(false)}
+                onSubmit={handlePinSubmit}
+                isLoading={isLoading}
+            />
         </>
     );
 };

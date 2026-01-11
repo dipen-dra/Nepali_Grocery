@@ -6,6 +6,8 @@ import express from "express";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+import https from "https";
+import fs from "fs";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 
@@ -24,13 +26,25 @@ dotenv.config();
 const app = express();
 
 const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "http://192.168.1.110:5173",
-    "http://192.168.206.1:5173",
-    "http://192.168.196.1:5173",
-    process.env.CLIENT_URL
-  ].filter(Boolean),
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      "http://localhost:5173",
+      process.env.CLIENT_URL
+    ];
+
+    // Allow any 192.168.x.x origin (Local Network)
+    // RegExp to match http://192.168.X.X:5173
+    const localNetworkRegex = /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:5173$/;
+
+    if (allowedOrigins.includes(origin) || localNetworkRegex.test(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
   credentials: true,
   allowedHeaders: ["Content-Type", "Authorization"],
@@ -48,11 +62,26 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again after 15 minutes',
 });
 
+import helmet from "helmet";
+
 // Apply CORS globally before rate limiting
 app.use(cors(corsOptions));
 
+// Apply Helmet for security headers (Hides stack info, prevents clickjacking, etc.)
+app.use(helmet());
+
+import { cleanInput } from "./middleware/cleanInput.js";
+
 // Apply rate limiting to all requests
 app.use(limiter);
+
+import { requestLogger } from "./middleware/requestLogger.js";
+
+// Apply XSS Sanitization
+app.use(cleanInput);
+
+// Apply Winston Logger (Tracks all requests)
+app.use(requestLogger);
 
 connectDB();
 
@@ -91,9 +120,26 @@ app.use(errorHandler);
 
 
 const PORT = process.env.PORT || 8081;
-const server = app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT} and http://192.168.1.110:${PORT}`);
-});
+
+let server;
+try {
+  const httpsOptions = {
+    key: fs.readFileSync(path.join(__dirname, 'server.key')),
+    cert: fs.readFileSync(path.join(__dirname, 'server.cert')),
+  };
+
+  server = https.createServer(httpsOptions, app).listen(PORT, () => {
+    console.log(`🔐 Secure Server running at https://localhost:${PORT}`);
+    console.log(`🔐 Network Access: https://192.168.1.110:${PORT}`);
+  });
+} catch (error) {
+  console.error("⚠️  HTTPS Error: SSL Certificates (server.key, server.cert) not found or invalid.");
+  console.error("⚠️  Falling back to HTTP for development. Please generate certificates to enable End-to-End Encryption.");
+
+  server = app.listen(PORT, () => {
+    console.log(`⚠️  Insecure Server running at http://localhost:${PORT} and http://192.168.1.110:${PORT}`);
+  });
+}
 
 
 export { app, server };
