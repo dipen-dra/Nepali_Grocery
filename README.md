@@ -404,9 +404,17 @@ const total = product.price * item.quantity;
 ```javascript
 const fileFilter = (req, file, cb) => {
     // 1. Prevent Null Byte Injection
-    if (file.originalname.indexOf('\0') !== -1) return cb(new Error('Malicious filename'), false);
+    if (file.originalname.indexOf('\0') !== -1) {
+        const error = new Error('Malicious filename detected');
+        error.statusCode = 400;
+        return cb(error, false);
+    }
     // 2. Double Extension Prevention
-    if (/\.(php|exe|sh|bat|js)\./i.test(file.originalname)) return cb(new Error('Double extension detected'), false);
+    if (/\.(php|exe|sh|bat|js)\./i.test(file.originalname)) {
+        const error = new Error('Double extension detected');
+        error.statusCode = 400;
+        return cb(error, false);
+    }
     // 3. Allowed Extensions
     if (mimetype && extname) return cb(null, true);
 };

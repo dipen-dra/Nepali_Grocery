@@ -24,7 +24,9 @@ const storage = multer.diskStorage({
 const fileFilter = (req, file, cb) => {
     // 1. Prevent Null Byte Injection
     if (file.originalname.indexOf('\0') !== -1) {
-        return cb(new Error('Malicious filename detected'), false);
+        const error = new Error('Malicious filename detected');
+        error.statusCode = 400;
+        return cb(error, false);
     }
 
     // 2. Allowed Extensions & Mime Types
@@ -38,13 +40,17 @@ const fileFilter = (req, file, cb) => {
     // Reject if the filename contains executable extensions before the final extension
     const doubleExtensionRegex = /\.(php|exe|sh|bat|js|html|py)\./i;
     if (doubleExtensionRegex.test(file.originalname)) {
-        return cb(new Error('Double extension file upload attempt detected'), false);
+        const error = new Error('Double extension file upload attempt detected');
+        error.statusCode = 400;
+        return cb(error, false);
     }
 
     if (mimetype && extname) {
         return cb(null, true);
     } else {
-        cb(new Error('Only .jpeg, .jpg and .png format allowed!'), false);
+        const error = new Error('Only .jpeg, .jpg and .png format allowed!');
+        error.statusCode = 400;
+        cb(error, false);
     }
 };
 

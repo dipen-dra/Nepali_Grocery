@@ -624,6 +624,7 @@ export const sendResetLink = async (req, res) => {
 
         const token = jwt.sign({ id: user._id }, process.env.SECRET, { expiresIn: "15m" });
         const resetUrl = `${process.env.CLIENT_URL}/reset-password/${token}`;
+        console.log("DEBUG: Generated Reset URL:", resetUrl);
 
         const mailOptions = {
             from: `'NepGrocery' <${process.env.EMAIL_USER}>`,
