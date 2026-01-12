@@ -3,11 +3,11 @@ import axios from 'axios';
 
 const getBaseUrl = () => {
     if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
-    return `http://${window.location.hostname}:8081/api`;
+    return `https://${window.location.hostname}:8081/api`;
 };
 
 const getServerUrl = () => {
-    return `http://${window.location.hostname}:8081`;
+    return `https://${window.location.hostname}:8081`;
 };
 
 const API_BASE_URL = getBaseUrl();
@@ -16,9 +16,7 @@ export const SERVER_BASE_URL = getServerUrl();
 const api = axios.create({
     baseURL: API_BASE_URL,
     withCredentials: true, // Send cookies with requests
-    headers: {
-        'Content-Type': 'application/json',
-    }
+    // headers: { 'Content-Type': 'application/json' } // Removed to allow multipart/form-data for file uploads
 });
 
 // Request interceptor removed (Using HttpOnly Cookies)

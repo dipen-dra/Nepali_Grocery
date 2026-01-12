@@ -31,7 +31,7 @@ const corsOptions = {
     if (!origin) return callback(null, true);
 
     const allowedOrigins = [
-      "http://localhost:5173",
+      "https://localhost:5173",
       process.env.CLIENT_URL
     ];
 
@@ -68,7 +68,9 @@ import helmet from "helmet";
 app.use(cors(corsOptions));
 
 // Apply Helmet for security headers (Hides stack info, prevents clickjacking, etc.)
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 
 import { cleanInput } from "./middleware/cleanInput.js";
 
