@@ -37,7 +37,7 @@ const corsOptions = {
 
     // Allow any 192.168.x.x origin (Local Network)
     // RegExp to match http://192.168.X.X:5173
-    const localNetworkRegex = /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:5173$/;
+    const localNetworkRegex = /^https:\/\/192\.168\.\d{1,3}\.\d{1,3}:5173$/;
 
     if (allowedOrigins.includes(origin) || localNetworkRegex.test(origin)) {
       callback(null, true);
