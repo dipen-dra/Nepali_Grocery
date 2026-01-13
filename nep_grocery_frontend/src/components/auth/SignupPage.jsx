@@ -20,6 +20,7 @@ const SignupPage = () => {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isTermsModalOpen, setTermsModalOpen] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState('');
+  const [nameInPasswordError, setNameInPasswordError] = useState('');
   const [captchaToken, setCaptchaToken] = useState(null);
 
   const calculateStrength = (password) => {
@@ -38,9 +39,27 @@ const SignupPage = () => {
 
   const { mutate: registerUser, isLoading: isSubmitting } = useRegisterUser();
 
+
+
+  const checkNameInPassword = (fullName, password) => {
+    if (!fullName || !password) return false;
+    const nameParts = fullName.trim().toLowerCase().split(/\s+/);
+    return nameParts.some(part => part.length > 2 && password.toLowerCase().includes(part));
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [name]: value };
+
+      // Check Name in Password whenever either changes
+      if (name === 'password' || name === 'fullName') {
+        const hasName = checkNameInPassword(updated.fullName, updated.password);
+        setNameInPasswordError(hasName ? 'Password cannot contain your name.' : '');
+      }
+      return updated;
+    });
+
     if (name === 'password') {
       setPasswordStrength(calculateStrength(value));
     }
@@ -166,9 +185,16 @@ const SignupPage = () => {
                         <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${passwordStrength === 'Medium' || passwordStrength === 'Strong' ? (passwordStrength === 'Medium' ? 'bg-yellow-500' : 'bg-green-500') : 'bg-gray-200'}`}></div>
                         <div className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${passwordStrength === 'Strong' ? 'bg-green-500' : 'bg-gray-200'}`}></div>
                       </div>
-                      <p className={`text-xs font-semibold text-right ${passwordStrength === 'Weak' ? 'text-red-500' : passwordStrength === 'Medium' ? 'text-yellow-600' : 'text-green-600'}`}>
-                        {passwordStrength && `${passwordStrength} Password`}
-                      </p>
+                      <div className="flex justify-between items-start">
+                        <p className={`text-xs font-semibold ${passwordStrength === 'Weak' ? 'text-red-500' : passwordStrength === 'Medium' ? 'text-yellow-600' : 'text-green-600'}`}>
+                          {passwordStrength && `${passwordStrength} Password`}
+                        </p>
+                        {nameInPasswordError && (
+                          <p className="text-xs font-bold text-red-600 ml-2 animate-pulse">
+                            {nameInPasswordError}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -202,7 +228,7 @@ const SignupPage = () => {
                 {/* Submit Button */}
                 <button
                   type="submit"
-                  disabled={isSubmitting || !agreedToTerms || passwordStrength !== 'Strong' || !captchaToken}
+                  disabled={isSubmitting || !agreedToTerms || passwordStrength !== 'Strong' || !captchaToken || nameInPasswordError}
                   className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-lg shadow-lg hover:shadow-xl transition duration-300 transform hover:-translate-y-0.5 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? 'Creating Account...' : 'Create Account'}

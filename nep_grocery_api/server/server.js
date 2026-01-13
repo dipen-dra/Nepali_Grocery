@@ -31,13 +31,13 @@ const corsOptions = {
     if (!origin) return callback(null, true);
 
     const allowedOrigins = [
-      "http://localhost:5173",
+      "https://localhost:5173",
       process.env.CLIENT_URL
     ];
 
     // Allow any 192.168.x.x origin (Local Network)
     // RegExp to match http://192.168.X.X:5173
-    const localNetworkRegex = /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}:5173$/;
+    const localNetworkRegex = /^https:\/\/192\.168\.\d{1,3}\.\d{1,3}:5173$/;
 
     if (allowedOrigins.includes(origin) || localNetworkRegex.test(origin)) {
       callback(null, true);
@@ -68,7 +68,9 @@ import helmet from "helmet";
 app.use(cors(corsOptions));
 
 // Apply Helmet for security headers (Hides stack info, prevents clickjacking, etc.)
-app.use(helmet());
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
 
 import { cleanInput } from "./middleware/cleanInput.js";
 

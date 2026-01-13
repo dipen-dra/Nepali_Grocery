@@ -404,9 +404,17 @@ const total = product.price * item.quantity;
 ```javascript
 const fileFilter = (req, file, cb) => {
     // 1. Prevent Null Byte Injection
-    if (file.originalname.indexOf('\0') !== -1) return cb(new Error('Malicious filename'), false);
+    if (file.originalname.indexOf('\0') !== -1) {
+        const error = new Error('Malicious filename detected');
+        error.statusCode = 400;
+        return cb(error, false);
+    }
     // 2. Double Extension Prevention
-    if (/\.(php|exe|sh|bat|js)\./i.test(file.originalname)) return cb(new Error('Double extension detected'), false);
+    if (/\.(php|exe|sh|bat|js)\./i.test(file.originalname)) {
+        const error = new Error('Double extension detected');
+        error.statusCode = 400;
+        return cb(error, false);
+    }
     // 3. Allowed Extensions
     if (mimetype && extname) return cb(null, true);
 };
@@ -487,3 +495,347 @@ In the payment system, we have replaced standard timestamp-based IDs with **UUID
 The NepGrocery system enforces **End-to-End Encryption (E2EE)** using **SSL/TLS protocols** across the entire application stack. Both the React frontend and the Node.js backend are configured to serve content exclusively over **HTTPS**, utilizing custom-generated **X.509 certificates** (Organization: NepGrocery). This architecture establishes a secure, encrypted tunnel for all network traffic, strictly preventing **Man-in-the-Middle (MitM) attacks** and ensuring that sensitive payloadsâ€”such as user credentials, session tokens, and payment dataâ€”remain confidential and tamper-proof during transit.
 
 
+# NepGrocery Security Viva Preparation
+
+## Authentication & Session Management
+
+### Q1: Why did you use HttpOnly cookies instead of localStorage for JWT tokens?
+
+**Answer:**
+"I chose HttpOnly cookies because they provide protection against XSS-based session hijacking. When a JWT is stored in localStorage, any JavaScript code running on the pageâ€”including malicious scripts injected via XSSâ€”can access it using `localStorage.getItem('token')`. However, with HttpOnly cookies, the browser automatically manages the token and JavaScript cannot read it via `document.cookie`. This means even if an attacker successfully injects a script, they cannot steal the session token. The cookie is automatically attached to every request by the browser, so the server can authenticate the user without exposing the token to client-side code."
+
+**Follow-up they might ask:** "But doesn't this make it vulnerable to CSRF?"
+
+**Answer:** "Yes, which is why I also set the `sameSite` attribute to 'lax' in development and 'none' with `secure: true` in production. This prevents the browser from sending cookies on cross-site requests, mitigating CSRF attacks."
+
+---
+
+### Q2: Explain your password security implementation.
+
+**Answer:**
+"I implemented three layers of password security:
+
+1. **Name Blocking:** The system prevents users from including their name in their password. For example, if the user's name is 'Dipendra', they cannot use 'Dipendra123'. This is implemented by splitting the user's full name into parts and checking if any part appears in the password.
+
+2. **Password History:** Users cannot reuse any of their last 5 passwords. The system stores hashed versions of previous passwords in a `passwordHistory` array and uses bcrypt to compare the new password against each historical hash.
+
+3. **Strong Hashing:** All passwords are hashed using bcrypt with a salt factor of 10, making brute-force attacks computationally expensive.
+
+This is implemented in `userController.js` during both registration and password reset."
+
+---
+
+### Q3: How does your rate limiting work?
+
+**Answer:**
+"I implemented two types of rate limiting:
+
+1. **Global Rate Limit:** 1000 requests per 15 minutes per IP address across the entire application. This is configured in `server.js` using `express-rate-limit`.
+
+2. **Login-Specific Rate Limit:** 10 login attempts per 10 minutes per IP address. This is implemented in `loginLimiter.js` and applied specifically to the login route. After 10 failed attempts, the user receives a 429 status code with the message 'Too many login attempts. Please try again after 10 minutes.'
+
+This prevents brute-force attacks on user accounts."
+
+---
+
+## Role-Based Access Control (RBAC)
+
+### Q4: How do you prevent privilege escalation in your application?
+
+**Answer:**
+"I use a two-layer middleware approach:
+
+1. **`authenticateUser` middleware:** This verifies the JWT token and checks if the user exists in the database and is active (`isActive: true`). This prevents deactivated users from accessing the system even if they have a valid token.
+
+2. **`isAdmin` middleware:** This checks if the authenticated user has `role: 'admin'`. Only users with this role can access admin routes like user management, order management, and dashboard statistics.
+
+These middlewares are applied in `adminUserRoutes.js` using `router.use(authenticateUser, isAdmin)`, ensuring every admin route requires both authentication AND authorization. A normal user cannot access admin endpoints even if they try to manipulate the request."
+
+**Code location:** `middleware/authorizedUser.js`
+
+---
+
+### Q5: What happens if someone tries to sign up as an admin via Google OAuth?
+
+**Answer:**
+"The system prevents this through **role locking**. In the `googleLogin` function in `userController.js`, when a new user is created via OAuth, their role is explicitly hardcoded to `'normal'`:
+
+```javascript
+user = new User({
+    email,
+    fullName,
+    password: await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10),
+    role: 'normal', // Force role to normal
+    profilePicture: picture,
+    isGoogleAuth: true
+});
+```
+
+The system ignores any role parameters sent in the request body. Only database administrators can manually change a user's role to 'admin' directly in MongoDB."
+
+---
+
+## Data Integrity & Payment Security
+
+### Q6: How do you prevent price tampering during checkout?
+
+**Answer:**
+"I implement a **server-side truth model**. The frontend sends only the product IDs and quantities in the order request. The backend then:
+
+1. Fetches the current price from the database for each product
+2. Calculates the total as `product.price * item.quantity`
+3. Ignores any price or total values sent from the frontend
+
+This is implemented in `utils/orderHelper.js` in the `calculateOrderDetails` function. Even if an attacker uses Burp Suite to modify the request and send `price: 1`, the server will use the real price from the database.
+
+I verified this works by testing with Burp Suiteâ€”I sent a tampered request with a fake price, and the server correctly calculated the real total."
+
+**Code location:** `utils/orderHelper.js`, line 55
+
+---
+
+### Q7: How do you prevent users from claiming fake discount eligibility?
+
+**Answer:**
+"The discount system checks the user's actual `groceryPoints` from the database, not from the request. In `orderHelper.js`, line 79:
+
+```javascript
+if (applyDiscount && user.groceryPoints >= 150) {
+    const discountAmount = itemsTotal * 0.25;
+    finalAmount -= discountAmount;
+    pointsToDeduct = 150;
+}
+```
+
+Even if the frontend sends `applyDiscount: true`, the server independently verifies that `user.groceryPoints >= 150` by querying the database. If the user doesn't have enough points, the discount is not applied."
+
+---
+
+## File Upload Security
+
+### Q8: What security measures did you implement for file uploads?
+
+**Answer:**
+"I implemented four layers of file upload security in `multerUpload.js`:
+
+1. **Null Byte Injection Prevention:** Checks if the filename contains null bytes (`\0`), which attackers use to bypass extension checks.
+
+2. **MIME Type Validation:** Verifies that the file's MIME type matches `image/jpeg`, `image/jpg`, or `image/png`.
+
+3. **Double Extension Prevention:** Uses a regex to detect filenames like `virus.php.png` where an executable extension appears before the image extension. The regex `/\.(php|exe|sh|bat|js|html|py)\./i` catches these attempts.
+
+4. **File Size Limiting:** Restricts uploads to 5MB maximum.
+
+All errors return a 400 status code with specific error messages, which are displayed to the user via toast notifications."
+
+**Code location:** `middleware/multerUpload.js`, lines 24-49
+
+---
+
+### Q9: How did you test the file upload security?
+
+**Answer:**
+"I tested it using Burp Suite. I intercepted a legitimate image upload request and modified the `filename` parameter from `profile.png` to `profile.php.png`. The server correctly rejected the request with the error message 'Double extension file upload attempt detected'. This proves the server-side validation works even if an attacker bypasses the frontend."
+
+---
+
+## XSS Prevention
+
+### Q10: Explain your XSS prevention strategy.
+
+**Answer:**
+"I use a **Defense in Depth** approach with two layers:
+
+1. **Backend Sanitization (`cleanInput.js`):** A global middleware that intercepts every request and recursively sanitizes all data in `req.body`, `req.query`, and `req.params` using the `xss` library. This prevents **Stored XSS** by cleaning malicious scripts before they reach the database.
+
+2. **Frontend Sanitization (`Chatbot.jsx`):** For components that need to render dynamic HTML (like the chatbot), I use `DOMPurify.sanitize()` before passing content to `dangerouslySetInnerHTML`. This prevents **DOM-based XSS**.
+
+This ensures that even if a script bypasses one layer, the other layer will catch it."
+
+**Code locations:**
+- Backend: `middleware/cleanInput.js`, lines 33-56
+- Frontend: `components/Chatbot.jsx`, line 179
+
+---
+
+### Q11: Why did you choose the `xss` library instead of `sanitize-html`?
+
+**Answer:**
+"The `xss` library is lightweight and specifically designed for preventing XSS attacks by stripping dangerous HTML tags and attributes. It's perfect for my use case where I need to clean user input globally. `sanitize-html` is more configurable but heavier, and I didn't need that level of customization. For frontend HTML rendering, I use `DOMPurify` because it's the industry standard for browser-based sanitization and works seamlessly with React."
+
+---
+
+## OAuth Security
+
+### Q12: How does your Google OAuth implementation prevent token substitution attacks?
+
+**Answer:**
+"I implement **audience validation** in the `googleLogin` function. When verifying the Google ID token, I explicitly check that the token's `aud` (audience) claim matches my application's Google Client ID:
+
+```javascript
+const ticket = await googleClient.verifyIdToken({
+    idToken: token,
+    audience: process.env.GOOGLE_CLIENT_ID
+});
+```
+
+This prevents an attacker from using a valid Google token generated for a *different* application to authenticate to my system. Without this check, an attacker could create their own app, get a valid token, and use it to access my application."
+
+**Code location:** `userController.js`, lines 925-927
+
+---
+
+### Q13: What other OAuth security checks do you perform?
+
+**Answer:**
+"I also verify that the user's email is verified by Google:
+
+```javascript
+if (!payload.email_verified) {
+    return res.status(403).json({ 
+        success: false, 
+        message: "Your Google email is not verified." 
+    });
+}
+```
+
+This prevents attackers from creating fake Google accounts with unverified emails and using them to access the system."
+
+---
+
+## Logging & Monitoring
+
+### Q14: Why did you implement Winston logging instead of using console.log?
+
+**Answer:**
+"Console logs disappear when the server restarts, making them useless for production debugging and security auditing. Winston provides:
+
+1. **Persistence:** Logs are saved to files in the `server/logs/` directory.
+
+2. **Daily Rotation:** Using `winston-daily-rotate-file`, a new log file is created each day (e.g., `2026-01-13-audit.log`), and old logs are automatically deleted after 90 days.
+
+3. **Categorization:** I have three types of logs:
+   - `error.log`: Critical crashes (500 errors)
+   - `audit.log`: Security events (401, 403, 429 errors)
+   - `access.log`: General traffic (200 responses)
+
+4. **Sensitive Data Redaction:** The `requestLogger` middleware automatically removes sensitive fields like `password` and `token` before logging.
+
+This makes it easy to investigate security incidents and debug production issues."
+
+**Code location:** `utils/logger.js` and `middleware/requestLogger.js`
+
+---
+
+## HTTPS & Encryption
+
+### Q15: How did you implement end-to-end HTTPS?
+
+**Answer:**
+"I implemented HTTPS at three levels:
+
+1. **Backend Server:** Generated self-signed SSL certificates using OpenSSL and configured the Node.js server to use HTTPS in `server.js`:
+```javascript
+const httpsOptions = {
+    key: fs.readFileSync(path.join(__dirname, 'server.key')),
+    cert: fs.readFileSync(path.join(__dirname, 'server.cert')),
+};
+server = https.createServer(httpsOptions, app);
+```
+
+2. **Frontend Development Server:** Configured Vite to use HTTPS in `vite.config.js` with the same certificates.
+
+3. **CORS Configuration:** Updated the CORS regex to accept HTTPS origins from both localhost and local network IPs.
+
+This ensures all communication between the client and server is encrypted, preventing man-in-the-middle attacks."
+
+---
+
+### Q16: What is the difference between your development and production SSL setup?
+
+**Answer:**
+"In development, I use self-signed certificates which browsers will warn about. In production, I would use certificates from a trusted Certificate Authority (CA) like Let's Encrypt. The code is already prepared for thisâ€”I just need to replace the `server.key` and `server.cert` files with CA-signed certificates, and the browser warnings will disappear."
+
+---
+
+## General Security Questions
+
+### Q17: What is Defense in Depth and where did you apply it?
+
+**Answer:**
+"Defense in Depth means implementing multiple layers of security so that if one layer fails, others still protect the system. I applied this principle in:
+
+1. **XSS Prevention:** Backend sanitization (`xss`) + Frontend sanitization (`DOMPurify`)
+2. **Authentication:** JWT verification + Database user validation + Active status check
+3. **File Uploads:** MIME type check + Extension validation + Double extension prevention + Size limits
+4. **Data Integrity:** Frontend validation + Backend recalculation from database
+
+This ensures no single point of failure can compromise the entire system."
+
+---
+
+### Q18: How does your system comply with OWASP Top 10?
+
+**Answer:**
+"I address multiple OWASP Top 10 vulnerabilities:
+
+1. **A01: Broken Access Control** â†’ RBAC with `authenticateUser` and `isAdmin` middlewares
+2. **A02: Cryptographic Failures** â†’ HTTPS encryption + bcrypt password hashing
+3. **A03: Injection** â†’ XSS sanitization with `xss` library + parameterized MongoDB queries
+4. **A05: Security Misconfiguration** â†’ Helmet.js for secure HTTP headers
+5. **A07: Identification and Authentication Failures** â†’ Rate limiting + Password policies + 2FA support
+8. **A08: Software and Data Integrity Failures** â†’ Server-side price calculation
+9. **A09: Security Logging and Monitoring Failures** â†’ Winston logging with audit trails
+
+This comprehensive approach ensures the application meets industry security standards."
+
+---
+
+## Bonus: Difficult Questions
+
+### Q19: If I steal a user's JWT token, can I access their account forever?
+
+**Answer:**
+"No, for three reasons:
+
+1. **Expiration:** JWTs expire after 7 days (`expiresIn: '7d'`).
+2. **Active Status Check:** Even with a valid token, the `authenticateUser` middleware checks if the user is still active in the database. If an admin deactivates the account, the token becomes useless.
+3. **Secret Rotation:** If we detect a breach, we can rotate the `SECRET` key in the `.env` file, which immediately invalidates all existing tokens.
+
+This limits the damage from a stolen token."
+
+---
+
+### Q20: What would you improve if you had more time?
+
+**Answer:**
+"I would add:
+
+1. **Refresh Tokens:** Implement short-lived access tokens (15 minutes) with long-lived refresh tokens for better security.
+2. **IP Whitelisting for Admin:** Restrict admin access to specific IP addresses.
+3. **Real-time Anomaly Detection:** Use machine learning to detect unusual login patterns.
+4. **Security Headers Audit:** Use tools like securityheaders.com to verify all recommended headers are set.
+5. **Automated Security Testing:** Integrate OWASP ZAP or similar tools into the CI/CD pipeline.
+
+However, the current implementation already exceeds typical student project security standards."
+
+---
+
+## Quick Reference: File Locations
+
+| Feature | File | Key Lines |
+|---------|------|-----------|
+| HttpOnly Cookies | `userController.js` | 567-572 |
+| RBAC Middleware | `authorizedUser.js` | 1-52 |
+| File Upload Security | `multerUpload.js` | 24-49 |
+| Price Calculation | `orderHelper.js` | 55 |
+| XSS Backend | `cleanInput.js` | 33-56 |
+| XSS Frontend | `Chatbot.jsx` | 179 |
+| OAuth Security | `userController.js` | 925-933 |
+| Winston Logging | `logger.js` | 1-62 |
+| Rate Limiting | `loginLimiter.js` | 3-12 |
+| Password Policies | `userController.js` | 687-702 |
+
+---
+
+**Final Tip:** Practice explaining these concepts in your own words. Don't memorize the answers word-for-wordâ€”understand the concepts so you can answer variations of these questions confidently. Good luck! ðŸš€
