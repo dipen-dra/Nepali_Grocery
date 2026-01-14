@@ -35,14 +35,12 @@ export const cleanInput = (req, res, next) => {
  */
 const sanitizeObject = (data) => {
     if (typeof data === 'string') {
-        return xss(data); // The core magic happens here 🧼
+        return xss(data);
     }
     if (Array.isArray(data)) {
         return data.map(item => sanitizeObject(item));
     }
     if (data !== null && typeof data === 'object') {
-        // Deep clone to avoid mutating original references immediately if needed, 
-        // but for middleware, modifying strictly is fine.
         const cleaned = {};
         for (const key in data) {
             if (Object.prototype.hasOwnProperty.call(data, key)) {
@@ -53,3 +51,6 @@ const sanitizeObject = (data) => {
     }
     return data;
 };
+
+
+
