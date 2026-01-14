@@ -9,7 +9,6 @@ export const errorHandler = (err, req, res, next) => {
         success: false,
         message: statusCode === 500
             ? 'An unexpected error occurred on the server.'
-            : err.message,
-        stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+            : err.message
     });
 };
