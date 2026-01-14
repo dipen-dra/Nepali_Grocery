@@ -22,7 +22,7 @@ export default defineConfig({
     tailwindcss(),
   ],
   define: {
-    'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify('381818830866-smf0ps7geage5ib54sdavnookdqnlgcq.apps.googleusercontent.com'),
+    'import.meta.env.VITE_GOOGLE_CLIENT_ID': JSON.stringify('529188153300-85o7limdibqm9nd8v5g3e8g0q1ufvadh.apps.googleusercontent.com'),
   },
   // Add this 'server' block
   server: {
