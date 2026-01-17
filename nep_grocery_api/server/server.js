@@ -67,10 +67,34 @@ import helmet from "helmet";
 // Apply CORS globally before rate limiting
 app.use(cors(corsOptions));
 
-// Apply Helmet for security headers (Hides stack info, prevents clickjacking, etc.)
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-}));
+// Helmet with strict CSP
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  })
+);
+
+app.use(
+  helmet.contentSecurityPolicy({
+    useDefaults: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", process.env.CLIENT_URL],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      connectSrc: ["'self'", process.env.CLIENT_URL],
+      frameSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  })
+);
+
+// Extra Security Headers
+app.use(helmet.referrerPolicy({ policy: "no-referrer" }));
+app.use(helmet.frameguard({ action: "deny" }));
 
 import { cleanInput } from "./middleware/cleanInput.js";
 
