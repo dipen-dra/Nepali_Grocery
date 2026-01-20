@@ -821,6 +821,29 @@ However, the current implementation already exceeds typical student project secu
 
 ---
 
+---
+
+## Advanced Protection: HTTP Parameter Pollution (HPP)
+
+### What is HPP?
+HTTP Parameter Pollution (HPP) is a vulnerability where an attacker sends multiple HTTP parameters with the same name to confuse the application. This can be used to bypass input validation, trick Web Application Firewalls (WAFs), or manipulate application logic.
+
+**Example Attack:**
+`POST /reset-password?email=admin@site.com&email=hacker@site.com`
+
+Without protection, a naive server might validate the first email (admin) but accidentally send the reset link to the second email (hacker).
+
+### Our Implementation
+We use the `hpp` middleware library in `server.js`. It runs immediately after the body parser and sanitizes `req.query` and `req.body` to ensure duplicate parameters are handled safely (usually by keeping only the last value), preventing the application from crashing or behaving unexpectedly.
+
+### Viva Question: HPP
+**Q21: What is HTTP Parameter Pollution (HPP) and how did you prevent it?**
+
+**Answer:**
+"HPP is an attack where hackers try to confuse the server by sending the same parameter multiple times (like `id=1&id=2`). I prevented this by implementing the `hpp` middleware in `server.js`. This automatically cleans the request object, ensuring that our application logic always receives a single, predictable value for every parameter, effectively neutralizing the attack."
+
+---
+
 ## Quick Reference: File Locations
 
 | Feature | File | Key Lines |
@@ -835,6 +858,7 @@ However, the current implementation already exceeds typical student project secu
 | Winston Logging | `logger.js` | 1-62 |
 | Rate Limiting | `loginLimiter.js` | 3-12 |
 | Password Policies | `userController.js` | 687-702 |
+| **HPP Protection** | `server.js` | 124 |
 
 ---
 
