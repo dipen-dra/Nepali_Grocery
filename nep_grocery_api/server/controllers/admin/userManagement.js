@@ -1,5 +1,6 @@
 import User from "../../models/User.js";
 import bcrypt from "bcrypt";
+import Log from "../../models/Log.js";
 import { logAdminAction } from "../../middleware/auditLogger.js";
 
 // Create
@@ -211,5 +212,24 @@ export const updateUserStatus = async (req, res) => {
     } catch (error) {
         console.error("Update status error:", error);
         res.status(500).json({ success: false, message: "Server Error" });
+    }
+};
+
+// Fetch System Logs
+export const getSystemLogs = async (req, res) => {
+    try {
+        const logs = await Log.find()
+            .sort({ createdAt: -1 })
+            .limit(100)
+            .populate('user', 'fullName email role');
+
+        return res.status(200).json({
+            success: true,
+            count: logs.length,
+            data: logs
+        });
+    } catch (error) {
+        console.error("Fetch logs error:", error);
+        return res.status(500).json({ success: false, message: "Failed to fetch logs" });
     }
 };

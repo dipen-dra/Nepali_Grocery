@@ -821,6 +821,42 @@ However, the current implementation already exceeds typical student project secu
 
 ---
 
+---
+
+## Advanced Protection: HTTP Parameter Pollution (HPP)
+
+### What is HPP?
+HTTP Parameter Pollution (HPP) is a vulnerability where an attacker sends multiple HTTP parameters with the same name to confuse the application. This can be used to bypass input validation, trick Web Application Firewalls (WAFs), or manipulate application logic.
+
+**Example Attack:**
+`POST /reset-password?email=admin@site.com&email=hacker@site.com`
+
+Without protection, a naive server might validate the first email (admin) but accidentally send the reset link to the second email (hacker).
+
+### Our Implementation
+We use the `hpp` middleware library in `server.js`. It runs immediately after the body parser and sanitizes `req.query` and `req.body` to ensure duplicate parameters are handled safely (usually by keeping only the last value), preventing the application from crashing or behaving unexpectedly.
+
+### Verification Evidence
+We verified this protection using Burp Suite by sending a polluted request: `GET /api/products?search=apple&search=banana`.
+
+**1. BEFORE Protection (Failure):**
+Without HPP, the server received an array `['apple', 'banana']`, causing a MongoDB `CastError` and a system crash (500 Error).
+![HPP Failure Screenshot](assets/hpp_failure.png)
+*(Figure 4.10: Server crash (500 Internal Server Error) due to parameter pollution)*
+
+**2. AFTER Protection (Success):**
+With our Custom HPP Middleware, the server sanitized the input to `"banana"` (the last value), preventing the crash and returning a valid 200 OK response.
+![HPP Success Screenshot](assets/hpp_success.png)
+*(Figure 4.11: Successful handling (200 OK) of polluted parameters)*
+
+### Viva Question: HPP
+**Q21: What is HTTP Parameter Pollution (HPP) and how did you prevent it?**
+
+**Answer:**
+"HPP is an attack where hackers try to confuse the server by sending the same parameter multiple times (like `id=1&id=2`). I prevented this by implementing the `hpp` middleware in `server.js`. This automatically cleans the request object, ensuring that our application logic always receives a single, predictable value for every parameter, effectively neutralizing the attack."
+
+---
+
 ## Quick Reference: File Locations
 
 | Feature | File | Key Lines |
@@ -835,6 +871,7 @@ However, the current implementation already exceeds typical student project secu
 | Winston Logging | `logger.js` | 1-62 |
 | Rate Limiting | `loginLimiter.js` | 3-12 |
 | Password Policies | `userController.js` | 687-702 |
+| **HPP Protection** | `server.js` | 124 |
 
 ---
 

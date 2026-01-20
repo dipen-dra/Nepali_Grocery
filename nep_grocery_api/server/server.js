@@ -4,6 +4,7 @@
 import dotenv from "dotenv";
 import express from "express";
 import cors from "cors";
+import hpp from "hpp";
 import path from "path";
 import { fileURLToPath } from "url";
 import https from "https";
@@ -66,6 +67,7 @@ import helmet from "helmet";
 
 // Apply CORS globally before rate limiting
 app.use(cors(corsOptions));
+// app.use(hpp()); // Moved down for proper ordering check
 
 // Helmet with strict CSP
 app.use(
@@ -121,8 +123,26 @@ const __dirname = path.dirname(__filename);
 
 import { activityLogger } from "./middleware/activityLogger.js";
 
-// app.use(cors(corsOptions)); // Moved up
+// Custom HPP Middleware
+const preventHpp = (req, res, next) => {
+  if (req.query && req.query.search && Array.isArray(req.query.search)) {
+    const lastValue = req.query.search[req.query.search.length - 1];
+
+    // Explicitly define property to bypass getter-only restriction
+    const newQuery = { ...req.query, search: String(lastValue) };
+    Object.defineProperty(req, 'query', {
+      value: newQuery,
+      writable: true,
+      enumerable: true,
+      configurable: true
+    });
+  }
+  next();
+};
+
 app.use(express.json());
+app.use(preventHpp);
+
 app.use(cookieParser());
 app.use(activityLogger); // Log all activities
 app.use(express.static(path.join(__dirname, "public")));
