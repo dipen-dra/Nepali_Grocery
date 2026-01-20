@@ -121,8 +121,11 @@ const __dirname = path.dirname(__filename);
 
 import { activityLogger } from "./middleware/activityLogger.js";
 
+import hpp from "hpp";
+
 // app.use(cors(corsOptions)); // Moved up
 app.use(express.json());
+app.use(hpp()); // Prevent HTTP Parameter Pollution
 app.use(cookieParser());
 app.use(activityLogger); // Log all activities
 app.use(express.static(path.join(__dirname, "public")));

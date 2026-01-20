@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { QueryClient, QueryClientProvider, useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
-import { Plus, Edit, Trash2, Search, Users, DollarSign, LogOut, Menu, X, AlertTriangle, ShoppingCart, Package, ClipboardList, Tag, Home as HomeIcon, Mail, PhoneCallIcon, User as UserIcon, MessageSquare, CheckCircle } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, Users, DollarSign, LogOut, Menu, X, AlertTriangle, ShoppingCart, Package, ClipboardList, Tag, Home as HomeIcon, Mail, PhoneCallIcon, User as UserIcon, MessageSquare, CheckCircle, FileText } from 'lucide-react';
 import { ToastContainer, toast } from 'react-toastify';
 import axios from 'axios';
 import 'react-toastify/dist/ReactToastify.css';
@@ -16,7 +16,7 @@ import { Chatbot } from '../components/Chatbot';
 
 const queryClient = new QueryClient();
 
-const API_URL = "http://192.168.1.78:8081/api";
+const API_URL = `https://${window.location.hostname}:8081/api`;
 
 const adminApi = axios.create({
     baseURL: API_URL,
@@ -82,6 +82,11 @@ const updateUserStatus = ({ userId, isActive }) => adminApi.put(`/admin/users/${
 
 const fetchUsers = async () => {
     const { data } = await adminApi.get('/admin/users');
+    return data.data || [];
+};
+
+const fetchSystemLogs = async () => {
+    const { data } = await adminApi.get('/admin/users/logs');
     return data.data || [];
 };
 
@@ -602,6 +607,50 @@ const CategoriesPage = () => {
 };
 
 
+const SystemLogsPage = () => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const { data: logs, isLoading, isError, error } = useQuery({ queryKey: ['adminLogs'], queryFn: fetchSystemLogs, refetchInterval: 30000 });
+
+    if (isLoading) return <LoadingSpinner />;
+    if (isError) return <ErrorMessage message={error.message} />;
+
+    const safeLogs = Array.isArray(logs) ? logs : [];
+    const filteredLogs = safeLogs.filter(log =>
+        (log.user?.fullName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+        (log.method + ' ' + log.url).toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    return (
+        <div className="space-y-6">
+            <h1 className="text-3xl font-bold text-gray-800">System Activity Logs</h1>
+            <Card>
+                <div className="relative w-full md:w-1/3 mb-4"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} /><input type="text" placeholder="Search logs..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500" /></div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-gray-50 uppercase text-gray-500"><tr><th className="p-3">Time</th><th className="p-3">User</th><th className="p-3">Action</th><th className="p-3">Status</th><th className="p-3">IP Address</th></tr></thead>
+                        <tbody className="divide-y divide-gray-200">
+                            {filteredLogs.length > 0 ? (
+                                filteredLogs.map(log => (
+                                    <tr key={log._id} className="hover:bg-gray-50">
+                                        <td className="p-3 text-gray-600 font-mono text-xs">{dayjs(log.createdAt).format('MMM D, HH:mm:ss')}</td>
+                                        <td className="p-3 font-medium text-gray-900">{log.user?.fullName || <span className="text-gray-400 italic">Guest</span>}</td>
+                                        <td className="p-3"><span className="font-mono text-xs bg-gray-100 px-1 py-0.5 rounded border">{log.method}</span> <span className="text-gray-700">{log.url}</span></td>
+                                        <td className="p-3"><span className={`px-2 py-0.5 rounded-full text-xs font-bold ${log.status >= 400 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>{log.status}</span></td>
+                                        <td className="p-3 text-gray-500 text-xs font-mono">{log.ip?.replace('::ffff:', '')}</td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr><td colSpan="5" className="text-center p-8 text-gray-500">No logs found.</td></tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </Card>
+        </div>
+    );
+};
+
+
 
 
 const ProductFormModal = ({ isOpen, onClose, onSave, product, categories }) => {
@@ -673,7 +722,7 @@ const AdminDashboard = () => {
             if (hash === 'logout') {
                 setLogoutConfirmOpen(true);
             } else {
-                const validPages = ['dashboard', 'orders', 'products', 'categories', 'users', 'profile'];
+                const validPages = ['dashboard', 'orders', 'products', 'categories', 'users', 'profile', 'logs'];
                 setActivePage(validPages.includes(hash) ? hash : 'dashboard');
             }
         };
@@ -689,6 +738,7 @@ const AdminDashboard = () => {
             case 'products': return <ProductsPage />;
             case 'categories': return <CategoriesPage />;
             case 'users': return <UsersPage />;
+            case 'logs': return <SystemLogsPage />;
             case 'profile': return <AdminProfilePage />;
             default: return <DashboardPage />;
         }
@@ -724,6 +774,7 @@ const AdminDashboard = () => {
                 <NavLink page="products" icon={Package}>Products</NavLink>
                 <NavLink page="categories" icon={Tag}>Categories</NavLink>
                 <NavLink page="users" icon={Users}>Customers</NavLink>
+                <NavLink page="logs" icon={FileText}>System Logs</NavLink>
                 <NavLink page="profile" icon={UserIcon}>Profile</NavLink>
             </nav>
             <div className="p-4 border-t border-gray-200">
