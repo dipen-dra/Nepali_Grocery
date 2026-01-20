@@ -836,6 +836,19 @@ Without protection, a naive server might validate the first email (admin) but ac
 ### Our Implementation
 We use the `hpp` middleware library in `server.js`. It runs immediately after the body parser and sanitizes `req.query` and `req.body` to ensure duplicate parameters are handled safely (usually by keeping only the last value), preventing the application from crashing or behaving unexpectedly.
 
+### Verification Evidence
+We verified this protection using Burp Suite by sending a polluted request: `GET /api/products?search=apple&search=banana`.
+
+**1. BEFORE Protection (Failure):**
+Without HPP, the server received an array `['apple', 'banana']`, causing a MongoDB `CastError` and a system crash (500 Error).
+![HPP Failure Screenshot](assets/hpp_failure.png)
+*(Figure 4.10: Server crash (500 Internal Server Error) due to parameter pollution)*
+
+**2. AFTER Protection (Success):**
+With our Custom HPP Middleware, the server sanitized the input to `"banana"` (the last value), preventing the crash and returning a valid 200 OK response.
+![HPP Success Screenshot](assets/hpp_success.png)
+*(Figure 4.11: Successful handling (200 OK) of polluted parameters)*
+
 ### Viva Question: HPP
 **Q21: What is HTTP Parameter Pollution (HPP) and how did you prevent it?**
 
