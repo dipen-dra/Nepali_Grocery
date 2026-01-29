@@ -33,3 +33,10 @@ logs/
 *.njsproj
 *.sln
 *.sw?
+# Config and Documentation
+.env
+README.md
+readme.md
+README
+readme
+
